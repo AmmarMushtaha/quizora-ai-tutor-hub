@@ -14,16 +14,195 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      ai_requests: {
+        Row: {
+          audio_url: string | null
+          content: string | null
+          created_at: string
+          credits_used: number
+          duration_minutes: number | null
+          id: string
+          image_url: string | null
+          pages_count: number | null
+          request_type: Database["public"]["Enums"]["ai_request_type"]
+          response: string | null
+          user_id: string
+          word_count: number | null
+        }
+        Insert: {
+          audio_url?: string | null
+          content?: string | null
+          created_at?: string
+          credits_used: number
+          duration_minutes?: number | null
+          id?: string
+          image_url?: string | null
+          pages_count?: number | null
+          request_type: Database["public"]["Enums"]["ai_request_type"]
+          response?: string | null
+          user_id: string
+          word_count?: number | null
+        }
+        Update: {
+          audio_url?: string | null
+          content?: string | null
+          created_at?: string
+          credits_used?: number
+          duration_minutes?: number | null
+          id?: string
+          image_url?: string | null
+          pages_count?: number | null
+          request_type?: Database["public"]["Enums"]["ai_request_type"]
+          response?: string | null
+          user_id?: string
+          word_count?: number | null
+        }
+        Relationships: []
+      }
+      conversation_history: {
+        Row: {
+          created_at: string
+          id: string
+          messages: Json
+          title: string
+          total_credits_used: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          messages?: Json
+          title: string
+          total_credits_used?: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          messages?: Json
+          title?: string
+          total_credits_used?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      profiles: {
+        Row: {
+          avatar_url: string | null
+          created_at: string
+          credits: number
+          email: string
+          full_name: string | null
+          id: string
+          role: Database["public"]["Enums"]["user_role"]
+          total_credits_used: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          avatar_url?: string | null
+          created_at?: string
+          credits?: number
+          email: string
+          full_name?: string | null
+          id?: string
+          role?: Database["public"]["Enums"]["user_role"]
+          total_credits_used?: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          avatar_url?: string | null
+          created_at?: string
+          credits?: number
+          email?: string
+          full_name?: string | null
+          id?: string
+          role?: Database["public"]["Enums"]["user_role"]
+          total_credits_used?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      subscriptions: {
+        Row: {
+          bonus_credits: number | null
+          created_at: string
+          credits_included: number
+          end_date: string
+          id: string
+          payment_id: string | null
+          plan_name: string
+          price: number
+          start_date: string
+          status: Database["public"]["Enums"]["subscription_status"]
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          bonus_credits?: number | null
+          created_at?: string
+          credits_included: number
+          end_date: string
+          id?: string
+          payment_id?: string | null
+          plan_name: string
+          price: number
+          start_date?: string
+          status?: Database["public"]["Enums"]["subscription_status"]
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          bonus_credits?: number | null
+          created_at?: string
+          credits_included?: number
+          end_date?: string
+          id?: string
+          payment_id?: string | null
+          plan_name?: string
+          price?: number
+          start_date?: string
+          status?: Database["public"]["Enums"]["subscription_status"]
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      deduct_credits: {
+        Args: {
+          p_user_id: string
+          p_credits_to_deduct: number
+          p_request_type: Database["public"]["Enums"]["ai_request_type"]
+          p_content?: string
+          p_response?: string
+          p_duration_minutes?: number
+          p_pages_count?: number
+          p_word_count?: number
+        }
+        Returns: boolean
+      }
     }
     Enums: {
-      [_ in never]: never
+      ai_request_type:
+        | "text_question"
+        | "image_question"
+        | "audio_summary"
+        | "mind_map"
+        | "chat_explanation"
+        | "research_paper"
+        | "text_editing"
+      subscription_status: "active" | "expired" | "cancelled"
+      user_role: "user" | "admin"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -150,6 +329,18 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      ai_request_type: [
+        "text_question",
+        "image_question",
+        "audio_summary",
+        "mind_map",
+        "chat_explanation",
+        "research_paper",
+        "text_editing",
+      ],
+      subscription_status: ["active", "expired", "cancelled"],
+      user_role: ["user", "admin"],
+    },
   },
 } as const
