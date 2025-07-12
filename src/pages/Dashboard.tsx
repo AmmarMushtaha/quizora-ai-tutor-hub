@@ -1,150 +1,125 @@
-import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
-import { supabase } from "@/integrations/supabase/client";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Progress } from "@/components/ui/progress";
+import { useEffect, useState } from 'react';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { 
   Brain, 
-  FileText, 
+  MessageSquare, 
+  Image, 
   Mic, 
-  Map, 
-  MessageCircle, 
-  Edit, 
-  Coins, 
-  Calendar,
-  LogOut,
-  Settings,
+  Network, 
+  FileText, 
+  Edit,
+  CreditCard,
   History,
-  TrendingUp
-} from "lucide-react";
-import Logo from "@/components/Logo";
-import { useToast } from "@/hooks/use-toast";
-
-interface Profile {
-  id: string;
-  email: string;
-  full_name: string;
-  credits: number;
-  total_credits_used: number;
-  role: string;
-}
-
-interface Subscription {
-  plan_name: string;
-  end_date: string;
-  status: string;
-  credits_included: number;
-}
+  User,
+  LogOut,
+  BookOpen
+} from 'lucide-react';
+import { supabase } from '@/integrations/supabase/client';
+import { useNavigate } from 'react-router-dom';
+import { useAuth } from '@/hooks/useAuth';
+import { toast } from 'sonner';
+import TextQuestion from '@/components/ai/TextQuestion';
+import ImageQuestion from '@/components/ai/ImageQuestion';
+import AudioSummary from '@/components/ai/AudioSummary';
+import MindMap from '@/components/ai/MindMap';
+import ResearchPaper from '@/components/ai/ResearchPaper';
+import TextEditing from '@/components/ai/TextEditing';
 
 const Dashboard = () => {
-  const [profile, setProfile] = useState<Profile | null>(null);
-  const [subscription, setSubscription] = useState<Subscription | null>(null);
+  const [profile, setProfile] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const { user } = useAuth();
   const navigate = useNavigate();
-  const { toast } = useToast();
 
   useEffect(() => {
-    checkAuth();
-  }, []);
+    if (!user) {
+      navigate('/auth');
+      return;
+    }
+    fetchProfile();
+  }, [user, navigate]);
 
-  const checkAuth = async () => {
+  const fetchProfile = async () => {
+    if (!user) return;
+    
     try {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) {
-        navigate("/auth");
-        return;
-      }
-
-      // Get user profile
       const { data: profileData, error: profileError } = await supabase
-        .from("profiles")
-        .select("*")
-        .eq("user_id", session.user.id)
+        .from('profiles')
+        .select('*')
+        .eq('user_id', user.id)
         .single();
 
-      if (profileError) throw profileError;
-      setProfile(profileData);
-
-      // Get current subscription
-      const { data: subscriptionData } = await supabase
-        .from("subscriptions")
-        .select("*")
-        .eq("user_id", session.user.id)
-        .eq("status", "active")
-        .order("created_at", { ascending: false })
-        .limit(1)
-        .single();
-
-      if (subscriptionData) setSubscription(subscriptionData);
-
-    } catch (error: any) {
-      console.error("Error fetching data:", error);
-      toast({
-        title: "خطأ",
-        description: "حدث خطأ في تحميل البيانات",
-        variant: "destructive",
-      });
+      if (profileError) {
+        console.error('خطأ في جلب بيانات الملف الشخصي:', profileError);
+        toast.error('حدث خطأ في تحميل البيانات');
+      } else {
+        setProfile(profileData);
+      }
+    } catch (error) {
+      console.error('خطأ في التحقق من المستخدم:', error);
     } finally {
       setLoading(false);
     }
   };
 
-  const handleSignOut = async () => {
-    await supabase.auth.signOut();
-    navigate("/");
-  };
-
-  const aiTools = [
+  const aiFeatures = [
     {
-      title: "حل الأسئلة النصية",
-      description: "حل أي سؤال فوراً باستخدام النص",
-      icon: Brain,
-      credits: "2 كريدت",
-      color: "bg-blue-500",
-      route: "/tools/text-questions"
+      id: 'text-question',
+      icon: MessageSquare,
+      title: 'طرح سؤال نصي',
+      description: 'اطرح أي سؤال واحصل على إجابة مفصلة',
+      credits: 5,
+      color: 'text-blue-500',
+      component: TextQuestion
     },
     {
-      title: "حل أسئلة الصور",
-      description: "حل أسئلة ورقة الامتحان من الصور",
-      icon: FileText,
-      credits: "8 كريدت",
-      color: "bg-green-500",
-      route: "/tools/image-questions"
+      id: 'image-question',
+      icon: Image,
+      title: 'سؤال مع صورة',
+      description: 'ارفق صورة واطرح سؤالاً حولها',
+      credits: 15,
+      color: 'text-green-500',
+      component: ImageQuestion
     },
     {
-      title: "تلخيص المحاضرات",
-      description: "تلخيص المحاضرات الصوتية بدقة عالية",
+      id: 'audio-summary',
       icon: Mic,
-      credits: "35 كريدت/15 دقيقة",
-      color: "bg-purple-500",
-      route: "/tools/audio-summary"
+      title: 'تلخيص الملفات الصوتية',
+      description: 'احصل على ملخص للمحاضرات والاجتماعات',
+      credits: 20,
+      color: 'text-purple-500',
+      component: AudioSummary
     },
     {
-      title: "الخرائط الذهنية",
-      description: "إنشاء خرائط ذهنية للدروس المعقدة",
-      icon: Map,
-      credits: "20 كريدت",
-      color: "bg-orange-500",
-      route: "/tools/mind-maps"
+      id: 'mind-map',
+      icon: Network,
+      title: 'إنشاء خريطة ذهنية',
+      description: 'نظم أفكارك في خريطة ذهنية تفاعلية',
+      credits: 10,
+      color: 'text-orange-500',
+      component: MindMap
     },
     {
-      title: "الروبوت الذكي",
-      description: "شرح الدروس بطريقة مبسطة",
-      icon: MessageCircle,
-      credits: "5-10 كريدت",
-      color: "bg-pink-500",
-      route: "/tools/smart-tutor"
+      id: 'research-paper',
+      icon: BookOpen,
+      title: 'كتابة بحث أكاديمي',
+      description: 'احصل على بحث أكاديمي متكامل',
+      credits: 50,
+      color: 'text-red-500',
+      component: ResearchPaper
     },
     {
-      title: "كتابة الأبحاث",
-      description: "إنشاء بحوث أكاديمية مخصصة",
+      id: 'text-editing',
       icon: Edit,
-      credits: "7-20 كريدت/صفحة",
-      color: "bg-indigo-500",
-      route: "/tools/research-papers"
-    }
+      title: 'تحرير النصوص',
+      description: 'حسن وصحح النصوص والمقالات',
+      credits: 8,
+      color: 'text-indigo-500',
+      component: TextEditing
+    },
   ];
 
   if (loading) {
@@ -155,34 +130,48 @@ const Dashboard = () => {
     );
   }
 
-  if (!profile) {
-    return null;
-  }
-
-  const subscriptionDaysLeft = subscription 
-    ? Math.ceil((new Date(subscription.end_date).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24))
-    : 0;
-
   return (
     <div className="min-h-screen bg-background">
-      {/* Header */}
+      {/* الشريط العلوي */}
       <header className="bg-card border-b border-border">
         <div className="container mx-auto px-4 py-4">
           <div className="flex items-center justify-between">
-            <Logo size="sm" />
             <div className="flex items-center gap-4">
-              <div className="text-right">
-                <p className="font-medium">{profile.full_name}</p>
-                <div className="flex items-center gap-2">
-                  <Coins className="w-4 h-4 text-yellow-500" />
-                  <span className="text-sm text-muted-foreground">{profile.credits} كريدت</span>
-                </div>
+              <Brain className="w-8 h-8 text-primary" />
+              <div>
+                <h1 className="text-2xl font-bold text-gradient">كويزورا</h1>
+                <p className="text-sm text-muted-foreground">منصة الذكاء الاصطناعي التعليمية</p>
               </div>
+            </div>
+            
+            <div className="flex items-center gap-4">
+              <Badge variant="secondary" className="text-lg px-4 py-2">
+                <CreditCard className="w-4 h-4 ml-2" />
+                {profile?.credits || 0} نقطة
+              </Badge>
+              
               <div className="flex gap-2">
-                <Button variant="outline" size="icon" onClick={() => navigate("/profile")}>
-                  <Settings className="w-4 h-4" />
+                <Button
+                  variant="outline"
+                  size="icon"
+                  onClick={() => navigate('/profile')}
+                >
+                  <User className="w-4 h-4" />
                 </Button>
-                <Button variant="outline" size="icon" onClick={handleSignOut}>
+                
+                <Button
+                  variant="outline"
+                  size="icon"
+                  onClick={() => navigate('/history')}
+                >
+                  <History className="w-4 h-4" />
+                </Button>
+                
+                <Button
+                  variant="outline"
+                  size="icon"
+                  onClick={() => supabase.auth.signOut()}
+                >
                   <LogOut className="w-4 h-4" />
                 </Button>
               </div>
@@ -191,122 +180,113 @@ const Dashboard = () => {
         </div>
       </header>
 
-      <div className="container mx-auto px-4 py-8">
-        {/* Welcome Section */}
+      {/* المحتوى الرئيسي */}
+      <main className="container mx-auto px-4 py-8">
         <div className="mb-8">
-          <h1 className="text-3xl font-bold mb-2">مرحباً، {profile.full_name}</h1>
-          <p className="text-muted-foreground">ابدأ رحلتك التعليمية مع أدوات الذكاء الاصطناعي المتطورة</p>
+          <h2 className="text-3xl font-bold mb-2">مرحباً، {profile?.full_name || 'المستخدم'}</h2>
+          <p className="text-muted-foreground">اختر إحدى الأدوات الذكية لبدء العمل</p>
         </div>
 
-        {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-          <Card className="glass-card">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">الكريدت المتبقي</CardTitle>
-              <Coins className="h-4 w-4 text-yellow-500" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{profile.credits}</div>
-              <Progress 
-                value={(profile.credits / (subscription?.credits_included || 100)) * 100} 
-                className="mt-2"
-              />
-            </CardContent>
-          </Card>
-
-          <Card className="glass-card">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">الاشتراك الحالي</CardTitle>
-              <Calendar className="h-4 w-4 text-blue-500" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{subscription?.plan_name || "لا يوجد"}</div>
-              {subscription && (
-                <p className="text-xs text-muted-foreground">
-                  {subscriptionDaysLeft > 0 
-                    ? `${subscriptionDaysLeft} يوم متبقي`
-                    : "منتهي الصلاحية"
-                  }
-                </p>
-              )}
-            </CardContent>
-          </Card>
-
-          <Card className="glass-card">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">إجمالي الاستخدام</CardTitle>
-              <TrendingUp className="h-4 w-4 text-green-500" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{profile.total_credits_used}</div>
-              <p className="text-xs text-muted-foreground">كريدت مستخدم</p>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* AI Tools Grid */}
-        <div className="mb-8">
-          <div className="flex items-center justify-between mb-6">
-            <h2 className="text-2xl font-bold">أدوات الذكاء الاصطناعي</h2>
-            <Button variant="outline" onClick={() => navigate("/history")}>
-              <History className="w-4 h-4 mr-2" />
-              سجل المحادثات
-            </Button>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {aiTools.map((tool, index) => (
-              <Card key={index} className="glass-card hover:shadow-lg transition-shadow cursor-pointer group" onClick={() => navigate(tool.route)}>
-                <CardHeader>
-                  <div className="flex items-center gap-3">
-                    <div className={`p-3 rounded-lg ${tool.color} text-white group-hover:scale-110 transition-transform`}>
-                      <tool.icon className="w-6 h-6" />
+        <Tabs defaultValue="workspace" className="w-full">
+          <TabsList className="grid w-full grid-cols-2">
+            <TabsTrigger value="tools">نظرة عامة</TabsTrigger>
+            <TabsTrigger value="workspace">مساحة العمل</TabsTrigger>
+          </TabsList>
+          
+          <TabsContent value="tools" className="space-y-6">
+            {/* شبكة الأدوات */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {aiFeatures.map((feature) => (
+                <Card key={feature.title} className="card-glow interactive-hover">
+                  <CardHeader className="text-center">
+                    <div className="flex justify-center mb-4">
+                      <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center">
+                        <feature.icon className={`w-8 h-8 ${feature.color}`} />
+                      </div>
                     </div>
-                    <div>
-                      <CardTitle className="text-lg">{tool.title}</CardTitle>
-                      <Badge variant="secondary">{tool.credits}</Badge>
-                    </div>
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  <CardDescription>{tool.description}</CardDescription>
+                    <CardTitle className="text-xl mb-2">{feature.title}</CardTitle>
+                    <p className="text-muted-foreground text-sm">{feature.description}</p>
+                  </CardHeader>
+                  <CardContent className="text-center">
+                    <Badge variant="outline" className="mb-4">
+                      {feature.credits} نقطة
+                    </Badge>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+
+            {/* إحصائيات سريعة */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <Card className="card-glow">
+                <CardContent className="text-center py-6">
+                  <CreditCard className="w-8 h-8 text-primary mx-auto mb-2" />
+                  <p className="text-2xl font-bold">{profile?.credits || 0}</p>
+                  <p className="text-muted-foreground">النقاط المتبقية</p>
                 </CardContent>
               </Card>
-            ))}
-          </div>
-        </div>
-
-        {/* Quick Actions */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <Card className="glass-card">
-            <CardHeader>
-              <CardTitle>الاشتراكات والباقات</CardTitle>
-              <CardDescription>
-                اطلع على الباقات المتاحة وقم بترقية اشتراكك
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <Button onClick={() => navigate("/pricing")} className="w-full">
-                عرض الباقات
-              </Button>
-            </CardContent>
-          </Card>
-
-          <Card className="glass-card">
-            <CardHeader>
-              <CardTitle>المساعدة والدعم</CardTitle>
-              <CardDescription>
-                تحتاج مساعدة؟ تواصل مع فريق الدعم الفني
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <Button variant="outline" onClick={() => navigate("/contact")} className="w-full">
-                تواصل معنا
-              </Button>
-            </CardContent>
-          </Card>
-        </div>
-      </div>
+              
+              <Card className="card-glow">
+                <CardContent className="text-center py-6">
+                  <Brain className="w-8 h-8 text-accent mx-auto mb-2" />
+                  <p className="text-2xl font-bold">{profile?.total_credits_used || 0}</p>
+                  <p className="text-muted-foreground">إجمالي النقاط المستخدمة</p>
+                </CardContent>
+              </Card>
+              
+              <Card className="card-glow">
+                <CardContent className="text-center py-6">
+                  <MessageSquare className="w-8 h-8 text-green-500 mx-auto mb-2" />
+                  <p className="text-2xl font-bold">0</p>
+                  <p className="text-muted-foreground">المحادثات النشطة</p>
+                </CardContent>
+              </Card>
+            </div>
+          </TabsContent>
+          
+          <TabsContent value="workspace" className="space-y-6">
+            <Tabs defaultValue="text-question" className="w-full">
+              <TabsList className="grid w-full grid-cols-3 lg:grid-cols-6">
+                {aiFeatures.map((feature) => (
+                  <TabsTrigger 
+                    key={feature.id} 
+                    value={feature.id}
+                    className="text-xs"
+                    disabled={!profile || profile.credits < feature.credits}
+                  >
+                    <feature.icon className="w-4 h-4 ml-1" />
+                    {feature.title}
+                  </TabsTrigger>
+                ))}
+              </TabsList>
+              
+              {aiFeatures.map((feature) => (
+                <TabsContent key={feature.id} value={feature.id}>
+                  {profile && profile.credits >= feature.credits ? (
+                    <feature.component />
+                  ) : (
+                    <Card className="card-glow">
+                      <CardContent className="text-center py-12">
+                        <CreditCard className="w-16 h-16 text-muted-foreground mx-auto mb-4" />
+                        <h3 className="text-xl font-semibold mb-2">نقاط غير كافية</h3>
+                        <p className="text-muted-foreground mb-4">
+                          تحتاج إلى {feature.credits} نقطة لاستخدام هذه الأداة
+                        </p>
+                        <Button 
+                          variant="outline"
+                          onClick={() => navigate('/profile')}
+                        >
+                          شراء نقاط إضافية
+                        </Button>
+                      </CardContent>
+                    </Card>
+                  )}
+                </TabsContent>
+              ))}
+            </Tabs>
+          </TabsContent>
+        </Tabs>
+      </main>
     </div>
   );
 };

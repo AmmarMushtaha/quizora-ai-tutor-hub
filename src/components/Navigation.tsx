@@ -1,10 +1,16 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Menu, X, Home, Settings, CreditCard, MessageCircle, BookOpen } from "lucide-react";
+import { Menu, X, Home, Settings, CreditCard, MessageCircle, BookOpen, LogOut } from "lucide-react";
+import { useAuth } from "@/hooks/useAuth";
+import { supabase } from "@/integrations/supabase/client";
+import { useNavigate } from "react-router-dom";
+import { toast } from "sonner";
 import Logo from "./Logo";
 
 const Navigation = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const { user } = useAuth();
+  const navigate = useNavigate();
 
   const navItems = [
     { label: "الرئيسية", href: "#home", icon: Home },
@@ -12,6 +18,12 @@ const Navigation = () => {
     { label: "الباقات", href: "#pricing", icon: CreditCard },
     { label: "تواصل معنا", href: "#contact", icon: MessageCircle },
   ];
+
+  const handleSignOut = async () => {
+    await supabase.auth.signOut();
+    toast.success('تم تسجيل الخروج بنجاح');
+    navigate('/');
+  };
 
   return (
     <nav className="fixed top-0 w-full bg-background/95 backdrop-blur-md border-b border-border z-50">
@@ -34,14 +46,50 @@ const Navigation = () => {
             ))}
           </div>
 
-          {/* أزرار الدخول والتسجيل */}
+          {/* أزرار الدخول والتسجيل أو قائمة المستخدم */}
           <div className="hidden md:flex items-center gap-4">
-            <Button variant="ghost" className="text-foreground hover:text-primary">
-              تسجيل الدخول
-            </Button>
-            <Button className="btn-glow">
-              إنشاء حساب
-            </Button>
+            {user ? (
+              <>
+                <Button 
+                  variant="ghost" 
+                  onClick={() => navigate('/dashboard')}
+                  className="text-foreground hover:text-primary"
+                >
+                  لوحة التحكم
+                </Button>
+                <Button 
+                  variant="ghost" 
+                  onClick={() => navigate('/profile')}
+                  className="text-foreground hover:text-primary"
+                >
+                  الملف الشخصي
+                </Button>
+                <Button 
+                  variant="outline" 
+                  onClick={handleSignOut}
+                  className="text-foreground hover:text-primary"
+                >
+                  <LogOut className="w-4 h-4 ml-2" />
+                  تسجيل الخروج
+                </Button>
+              </>
+            ) : (
+              <>
+                <Button 
+                  variant="ghost" 
+                  onClick={() => navigate('/auth')}
+                  className="text-foreground hover:text-primary"
+                >
+                  تسجيل الدخول
+                </Button>
+                <Button 
+                  className="btn-glow"
+                  onClick={() => navigate('/auth')}
+                >
+                  إنشاء حساب
+                </Button>
+              </>
+            )}
           </div>
 
           {/* زر القائمة - الشاشات الصغيرة */}
@@ -71,12 +119,63 @@ const Navigation = () => {
                 </a>
               ))}
               <div className="flex flex-col gap-2 pt-4 border-t border-border">
-                <Button variant="ghost" className="justify-start">
-                  تسجيل الدخول
-                </Button>
-                <Button className="btn-glow justify-start">
-                  إنشاء حساب
-                </Button>
+                {user ? (
+                  <>
+                    <Button 
+                      variant="ghost" 
+                      className="justify-start"
+                      onClick={() => {
+                        navigate('/dashboard');
+                        setIsMenuOpen(false);
+                      }}
+                    >
+                      لوحة التحكم
+                    </Button>
+                    <Button 
+                      variant="ghost" 
+                      className="justify-start"
+                      onClick={() => {
+                        navigate('/profile');
+                        setIsMenuOpen(false);
+                      }}
+                    >
+                      الملف الشخصي
+                    </Button>
+                    <Button 
+                      variant="outline" 
+                      className="justify-start"
+                      onClick={() => {
+                        handleSignOut();
+                        setIsMenuOpen(false);
+                      }}
+                    >
+                      <LogOut className="w-4 h-4 ml-2" />
+                      تسجيل الخروج
+                    </Button>
+                  </>
+                ) : (
+                  <>
+                    <Button 
+                      variant="ghost" 
+                      className="justify-start"
+                      onClick={() => {
+                        navigate('/auth');
+                        setIsMenuOpen(false);
+                      }}
+                    >
+                      تسجيل الدخول
+                    </Button>
+                    <Button 
+                      className="btn-glow justify-start"
+                      onClick={() => {
+                        navigate('/auth');
+                        setIsMenuOpen(false);
+                      }}
+                    >
+                      إنشاء حساب
+                    </Button>
+                  </>
+                )}
               </div>
             </div>
           </div>
