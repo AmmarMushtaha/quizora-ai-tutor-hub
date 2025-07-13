@@ -1,11 +1,15 @@
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, Sparkles, Zap, Brain, BookOpen } from "lucide-react";
+import { useNavigate } from "react-router-dom";
+import { useAuth } from "@/hooks/useAuth";
 import Logo from "./Logo";
 
 const HeroSection = () => {
   const [typedText, setTypedText] = useState("");
   const fullText = "حل الامتحانات بالذكاء الاصطناعي في ثوانٍ";
+  const navigate = useNavigate();
+  const { user } = useAuth();
 
   useEffect(() => {
     let index = 0;
@@ -79,11 +83,18 @@ const HeroSection = () => {
 
           {/* أزرار العمل */}
           <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
-            <Button className="btn-glow text-lg px-8 py-4 group">
-              ابدأ مجاناً الآن
+            <Button 
+              className="btn-glow text-lg px-8 py-4 group"
+              onClick={() => navigate(user ? '/dashboard' : '/auth')}
+            >
+              {user ? 'لوحة التحكم' : 'ابدأ مجاناً الآن'}
               <ArrowLeft className="mr-2 w-5 h-5 group-hover:translate-x-1 transition-transform" />
             </Button>
-            <Button variant="outline" className="text-lg px-8 py-4 bg-background/50 backdrop-blur-sm">
+            <Button 
+              variant="outline" 
+              className="text-lg px-8 py-4 bg-background/50 backdrop-blur-sm"
+              onClick={() => document.getElementById('features')?.scrollIntoView({ behavior: 'smooth' })}
+            >
               شاهد العرض التوضيحي
             </Button>
           </div>
