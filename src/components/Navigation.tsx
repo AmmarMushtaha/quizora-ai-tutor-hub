@@ -1,6 +1,6 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { Menu, X, Home, Settings, CreditCard, MessageCircle, BookOpen, LogOut } from "lucide-react";
+import { Menu, X, Home, Settings, CreditCard, MessageCircle, BookOpen, LogOut, Shield } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
@@ -9,8 +9,27 @@ import Logo from "./Logo";
 
 const Navigation = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [isAdmin, setIsAdmin] = useState(false);
   const { user } = useAuth();
   const navigate = useNavigate();
+
+  useEffect(() => {
+    const checkAdminStatus = async () => {
+      if (user) {
+        const { data: profile } = await supabase
+          .from("profiles")
+          .select("role")
+          .eq("user_id", user.id)
+          .single();
+        
+        setIsAdmin(profile?.role === 'admin');
+      } else {
+        setIsAdmin(false);
+      }
+    };
+
+    checkAdminStatus();
+  }, [user]);
 
   const navItems = [
     { label: "الرئيسية", href: "#home", icon: Home },
@@ -57,13 +76,23 @@ const Navigation = () => {
                 >
                   لوحة التحكم
                 </Button>
-                <Button 
-                  variant="ghost" 
-                  onClick={() => navigate('/profile')}
-                  className="text-foreground hover:text-primary"
-                >
-                  الملف الشخصي
-                </Button>
+                 <Button 
+                   variant="ghost" 
+                   onClick={() => navigate('/profile')}
+                   className="text-foreground hover:text-primary"
+                 >
+                   الملف الشخصي
+                 </Button>
+                 {isAdmin && (
+                   <Button 
+                     variant="ghost" 
+                     onClick={() => navigate('/admin')}
+                     className="text-foreground hover:text-primary"
+                   >
+                     <Shield className="w-4 h-4 ml-2" />
+                     لوحة المسؤول
+                   </Button>
+                 )}
                 <Button 
                   variant="outline" 
                   onClick={handleSignOut}
@@ -131,16 +160,29 @@ const Navigation = () => {
                     >
                       لوحة التحكم
                     </Button>
-                    <Button 
-                      variant="ghost" 
-                      className="justify-start"
-                      onClick={() => {
-                        navigate('/profile');
-                        setIsMenuOpen(false);
-                      }}
-                    >
-                      الملف الشخصي
-                    </Button>
+                     <Button 
+                       variant="ghost" 
+                       className="justify-start"
+                       onClick={() => {
+                         navigate('/profile');
+                         setIsMenuOpen(false);
+                       }}
+                     >
+                       الملف الشخصي
+                     </Button>
+                     {isAdmin && (
+                       <Button 
+                         variant="ghost" 
+                         className="justify-start"
+                         onClick={() => {
+                           navigate('/admin');
+                           setIsMenuOpen(false);
+                         }}
+                       >
+                         <Shield className="w-4 h-4 ml-2" />
+                         لوحة المسؤول
+                       </Button>
+                     )}
                     <Button 
                       variant="outline" 
                       className="justify-start"

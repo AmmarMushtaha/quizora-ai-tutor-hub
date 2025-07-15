@@ -50,13 +50,31 @@ const Dashboard = () => {
         .from('profiles')
         .select('*')
         .eq('user_id', user.id)
-        .single();
+        .maybeSingle();
 
       if (profileError) {
         console.error('خطأ في جلب بيانات الملف الشخصي:', profileError);
         toast.error('حدث خطأ في تحميل البيانات');
-      } else {
+      } else if (profileData) {
         setProfile(profileData);
+      } else {
+        // إنشاء ملف شخصي جديد إذا لم يوجد
+        const { data: newProfile, error: createError } = await supabase
+          .from('profiles')
+          .insert({
+            user_id: user.id,
+            email: user.email || '',
+            full_name: user.user_metadata?.full_name || user.email || '',
+            credits: 100 // رصيد ابتدائي
+          })
+          .select()
+          .single();
+          
+        if (createError) {
+          console.error('خطأ في إنشاء الملف الشخصي:', createError);
+        } else {
+          setProfile(newProfile);
+        }
       }
     } catch (error) {
       console.error('خطأ في التحقق من المستخدم:', error);

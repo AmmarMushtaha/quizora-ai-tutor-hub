@@ -29,6 +29,7 @@ import { useToast } from "@/hooks/use-toast";
 
 interface User {
   id: string;
+  user_id: string;
   email: string;
   full_name: string;
   credits: number;
@@ -196,6 +197,77 @@ const AdminDashboard = () => {
     }
   };
 
+  const updateUserCredits = async (userId: string, newCredits: number) => {
+    try {
+      const { error } = await supabase
+        .from("profiles")
+        .update({ credits: newCredits })
+        .eq("user_id", userId);
+
+      if (error) throw error;
+
+      toast({
+        title: "تم التحديث",
+        description: "تم تحديث رصيد المستخدم بنجاح",
+      });
+
+      await loadAdminData();
+    } catch (error: any) {
+      toast({
+        title: "خطأ", 
+        description: "حدث خطأ في تحديث الرصيد",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const createSubscription = async (userId: string, planName: string, credits: number, price: number) => {
+    try {
+      // إنشاء اشتراك جديد
+      const { error: subError } = await supabase
+        .from("subscriptions")
+        .insert({
+          user_id: userId,
+          plan_name: planName,
+          credits_included: credits,
+          price: price,
+          status: 'active',
+          end_date: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString() // 30 يوم
+        });
+
+      if (subError) throw subError;
+
+      // إضافة الرصيد للمستخدم
+      const { data: currentUser } = await supabase
+        .from("profiles")
+        .select("credits")
+        .eq("user_id", userId)
+        .single();
+        
+      if (currentUser) {
+        const { error: creditError } = await supabase
+          .from("profiles")
+          .update({ credits: currentUser.credits + credits })
+          .eq("user_id", userId);
+          
+        if (creditError) throw creditError;
+      }
+
+      toast({
+        title: "تم الإنشاء",
+        description: "تم إنشاء الاشتراك بنجاح",
+      });
+
+      await loadAdminData();
+    } catch (error: any) {
+      toast({
+        title: "خطأ",
+        description: "حدث خطأ في إنشاء الاشتراك",
+        variant: "destructive",
+      });
+    }
+  };
+
   const filteredUsers = users.filter(user => 
     user.full_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
     user.email.toLowerCase().includes(searchTerm.toLowerCase())
@@ -343,20 +415,46 @@ const AdminDashboard = () => {
                         <TableCell>
                           {new Date(user.created_at).toLocaleDateString('ar-SA')}
                         </TableCell>
-                        <TableCell>
-                          <div className="flex gap-2">
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => updateUserRole(
-                                user.id, 
-                                user.role === 'admin' ? 'user' : 'admin'
-                              )}
-                            >
-                              {user.role === 'admin' ? 'إلغاء الإدارة' : 'جعل مسؤول'}
-                            </Button>
-                          </div>
-                        </TableCell>
+                         <TableCell>
+                           <div className="flex gap-2">
+                             <Button
+                               variant="outline"
+                               size="sm"
+                               onClick={() => updateUserRole(
+                                 user.user_id, 
+                                 user.role === 'admin' ? 'user' : 'admin'
+                               )}
+                             >
+                               {user.role === 'admin' ? 'إلغاء الإدارة' : 'جعل مسؤول'}
+                             </Button>
+                             <Button
+                               variant="outline"
+                               size="sm"
+                               onClick={() => {
+                                 const newCredits = prompt('أدخل الرصيد الجديد:', user.credits.toString());
+                                 if (newCredits && !isNaN(Number(newCredits))) {
+                                   updateUserCredits(user.user_id, Number(newCredits));
+                                 }
+                               }}
+                             >
+                               تعديل الرصيد
+                             </Button>
+                             <Button
+                               variant="outline"
+                               size="sm"
+                               onClick={() => {
+                                 const planName = prompt('اسم الباقة:', 'باقة مميزة');
+                                 const credits = prompt('عدد النقاط:', '100');
+                                 const price = prompt('السعر:', '10');
+                                 if (planName && credits && price && !isNaN(Number(credits)) && !isNaN(Number(price))) {
+                                   createSubscription(user.user_id, planName, Number(credits), Number(price));
+                                 }
+                               }}
+                             >
+                               إضافة اشتراك
+                             </Button>
+                           </div>
+                         </TableCell>
                       </TableRow>
                     ))}
                   </TableBody>
