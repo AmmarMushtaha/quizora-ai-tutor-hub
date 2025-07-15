@@ -19,58 +19,64 @@ const MindMap = () => {
 
     setLoading(true);
     try {
-      // Simulate AI processing
-      await new Promise(resolve => setTimeout(resolve, 3000));
-      const mockMindMap = `# خريطة ذهنية: ${topic}
-
-## الفكرة الرئيسية
-└── ${topic}
-
-## الأفكار الفرعية
-├── الفرع الأول
-│   ├── التفصيل 1.1
-│   ├── التفصيل 1.2
-│   └── التفصيل 1.3
-│
-├── الفرع الثاني
-│   ├── التفصيل 2.1
-│   ├── التفصيل 2.2
-│   └── التفصيل 2.3
-│
-├── الفرع الثالث
-│   ├── التفصيل 3.1
-│   ├── التفصيل 3.2
-│   └── التفصيل 3.3
-│
-└── الفرع الرابع
-    ├── التفصيل 4.1
-    ├── التفصيل 4.2
-    └── التفصيل 4.3
-
-## الروابط والاتصالات
-• الفرع الأول ↔ الفرع الثاني
-• الفرع الثاني ↔ الفرع الثالث  
-• الفرع الثالث ↔ الفرع الرابع
-
-## الخلاصة
-هذه الخريطة الذهنية تُظهر التفرعات والروابط الأساسية للموضوع المطلوب.`;
-      
-      setMindMap(mockMindMap);
-      
-      // Deduct credits
+      // الحصول على المستخدم الحالي
       const { data: { user } } = await supabase.auth.getUser();
-      if (user) {
-        await supabase.rpc('deduct_credits', {
+      if (!user) {
+        toast.error('يجب تسجيل الدخول أولاً');
+        return;
+      }
+
+      // خصم النقاط أولاً
+      const { data: deductResult, error: deductError } = await supabase
+        .rpc('deduct_credits', {
           p_user_id: user.id,
           p_credits_to_deduct: 10,
           p_request_type: 'mind_map',
           p_content: topic,
-          p_response: mockMindMap
+          p_word_count: topic.split(' ').length
         });
+
+      if (deductError || !deductResult) {
+        toast.error('رصيدك غير كافي أو حدث خطأ في خصم النقاط');
+        return;
       }
+
+      // استدعاء Gemini API لإنشاء الخريطة الذهنية
+      const { data: aiResponse, error: aiError } = await supabase.functions.invoke('gemini-mindmap', {
+        body: { 
+          topic: topic
+        }
+      });
+
+      if (aiError) {
+        console.error('AI Error:', aiError);
+        toast.error('حدث خطأ في إنشاء الخريطة الذهنية');
+        return;
+      }
+
+      if (aiResponse.error) {
+        toast.error(aiResponse.error);
+        return;
+      }
+
+      // عرض الاستجابة الخام من Gemini
+      const displayText = aiResponse.rawResponse || JSON.stringify(aiResponse.mindmap, null, 2);
+      setMindMap(displayText);
+      
+      // تحديث قاعدة البيانات بالاستجابة
+      await supabase
+        .rpc('deduct_credits', {
+          p_user_id: user.id,
+          p_credits_to_deduct: 0,
+          p_request_type: 'mind_map',
+          p_content: topic,
+          p_response: displayText,
+          p_word_count: topic.split(' ').length
+        });
       
       toast.success('تم إنشاء الخريطة الذهنية بنجاح');
     } catch (error) {
+      console.error('Error:', error);
       toast.error('حدث خطأ أثناء إنشاء الخريطة الذهنية');
     } finally {
       setLoading(false);
@@ -140,6 +146,9 @@ const MindMap = () => {
             </div>
             <div className="p-4 bg-secondary/50 rounded-lg border font-mono text-sm whitespace-pre-line">
               {mindMap}
+            </div>
+            <div className="text-xs text-muted-foreground">
+              مدعوم بـ Gemini 2.0 Flash
             </div>
           </div>
         )}

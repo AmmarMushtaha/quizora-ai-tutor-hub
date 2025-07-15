@@ -47,26 +47,67 @@ const ImageQuestion = () => {
 
     setLoading(true);
     try {
-      // Simulate AI response for now
-      await new Promise(resolve => setTimeout(resolve, 3000));
-      const mockAnswer = `بناءً على تحليل الصورة المرفقة، يمكنني الإجابة على سؤالك: "${question}". الصورة تحتوي على عناصر مختلفة يمكن تحليلها وشرحها بالتفصيل.`;
-      
-      setAnswer(mockAnswer);
-      
-      // Deduct credits
+      // الحصول على المستخدم الحالي
       const { data: { user } } = await supabase.auth.getUser();
-      if (user) {
-        await supabase.rpc('deduct_credits', {
+      if (!user) {
+        toast.error('يجب تسجيل الدخول أولاً');
+        return;
+      }
+
+      // خصم النقاط أولاً
+      const { data: deductResult, error: deductError } = await supabase
+        .rpc('deduct_credits', {
           p_user_id: user.id,
           p_credits_to_deduct: 15,
           p_request_type: 'image_question',
           p_content: question,
-          p_response: mockAnswer
+          p_word_count: question.split(' ').length
         });
+
+      if (deductError || !deductResult) {
+        toast.error('رصيدك غير كافي أو حدث خطأ في خصم النقاط');
+        return;
       }
+
+      // تحويل الصورة إلى base64
+      const base64Image = imagePreview;
+
+      // استدعاء Gemini Vision API
+      const { data: aiResponse, error: aiError } = await supabase.functions.invoke('gemini-vision', {
+        body: { 
+          prompt: question,
+          image: base64Image,
+          mimeType: image.type || 'image/jpeg'
+        }
+      });
+
+      if (aiError) {
+        console.error('AI Error:', aiError);
+        toast.error('حدث خطأ في تحليل الصورة');
+        return;
+      }
+
+      if (aiResponse.error) {
+        toast.error(aiResponse.error);
+        return;
+      }
+
+      setAnswer(aiResponse.response);
+      
+      // تحديث قاعدة البيانات بالاستجابة
+      await supabase
+        .rpc('deduct_credits', {
+          p_user_id: user.id,
+          p_credits_to_deduct: 0,
+          p_request_type: 'image_question',
+          p_content: question,
+          p_response: aiResponse.response,
+          p_word_count: question.split(' ').length
+        });
       
       toast.success('تم تحليل الصورة والحصول على الإجابة بنجاح');
     } catch (error) {
+      console.error('Error:', error);
       toast.error('حدث خطأ أثناء تحليل الصورة');
     } finally {
       setLoading(false);
@@ -148,7 +189,10 @@ const ImageQuestion = () => {
         {answer && (
           <div className="mt-6 p-4 bg-secondary/50 rounded-lg border">
             <h3 className="font-semibold mb-2 text-primary">التحليل:</h3>
-            <p className="leading-relaxed">{answer}</p>
+            <p className="leading-relaxed whitespace-pre-wrap">{answer}</p>
+            <div className="mt-2 text-xs text-muted-foreground">
+              مدعوم بـ Gemini 2.0 Flash Vision
+            </div>
           </div>
         )}
       </CardContent>

@@ -33,47 +33,72 @@ const TextEditing = () => {
 
     setLoading(true);
     try {
-      // Simulate AI processing
-      await new Promise(resolve => setTimeout(resolve, 3000));
-      
-      const selectedEditType = editTypes.find(type => type.value === editType);
-      const mockEditedText = `تم تطبيق "${selectedEditType?.label}" على النص التالي:
-
-النص الأصلي:
-"${originalText}"
-
-النص المُحرر:
-هذا نص محرر ومحسن بناءً على طلبك. تم تطبيق التعديلات اللازمة لتحسين الجودة والوضوح والأسلوب. النص الآن أكثر وضوحاً وسهولة في القراءة مع الحفاظ على المعنى الأصلي.
-
-التحسينات المطبقة:
-• تصحيح الأخطاء النحوية والإملائية
-• تحسين تدفق الجمل
-• استخدام مفردات أكثر دقة
-• تنظيم أفضل للأفكار
-• توضيح المعاني الغامضة
-
-النص النهائي جاهز للاستخدام ويحقق الغرض المطلوب بفعالية أكبر.`;
-      
-      setEditedText(mockEditedText);
-      
-      // Calculate word count
-      const wordCount = originalText.split(/\s+/).length;
-      
-      // Deduct credits
+      // الحصول على المستخدم الحالي
       const { data: { user } } = await supabase.auth.getUser();
-      if (user) {
-        await supabase.rpc('deduct_credits', {
+      if (!user) {
+        toast.error('يجب تسجيل الدخول أولاً');
+        return;
+      }
+
+      // خصم النقاط أولاً
+      const wordCount = originalText.split(/\s+/).length;
+      const { data: deductResult, error: deductError } = await supabase
+        .rpc('deduct_credits', {
           p_user_id: user.id,
           p_credits_to_deduct: 8,
           p_request_type: 'text_editing',
           p_content: originalText,
-          p_response: mockEditedText,
           p_word_count: wordCount
         });
+
+      if (deductError || !deductResult) {
+        toast.error('رصيدك غير كافي أو حدث خطأ في خصم النقاط');
+        return;
       }
+
+      const selectedEditType = editTypes.find(type => type.value === editType);
+      const editPrompt = `قم بتحرير النص التالي وتطبيق "${selectedEditType?.label}":
+
+النص الأصلي:
+"${originalText}"
+
+يرجى تقديم النص المُحرر والمُحسن مع شرح التحسينات المطبقة.`;
+
+      // استدعاء Gemini API
+      const { data: aiResponse, error: aiError } = await supabase.functions.invoke('gemini-text', {
+        body: { 
+          prompt: editPrompt,
+          type: 'text_editing'
+        }
+      });
+
+      if (aiError) {
+        console.error('AI Error:', aiError);
+        toast.error('حدث خطأ في تحرير النص');
+        return;
+      }
+
+      if (aiResponse.error) {
+        toast.error(aiResponse.error);
+        return;
+      }
+
+      setEditedText(aiResponse.response);
+      
+      // تحديث قاعدة البيانات بالاستجابة
+      await supabase
+        .rpc('deduct_credits', {
+          p_user_id: user.id,
+          p_credits_to_deduct: 0,
+          p_request_type: 'text_editing',
+          p_content: originalText,
+          p_response: aiResponse.response,
+          p_word_count: wordCount
+        });
       
       toast.success('تم تحرير النص بنجاح');
     } catch (error) {
+      console.error('Error:', error);
       toast.error('حدث خطأ أثناء تحرير النص');
     } finally {
       setLoading(false);
