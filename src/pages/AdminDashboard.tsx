@@ -8,6 +8,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Progress } from "@/components/ui/progress";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { 
   Users, 
   CreditCard, 
@@ -64,7 +65,14 @@ interface AIRequest {
   request_type: string;
   credits_used: number;
   created_at: string;
-  profiles: { full_name: string; email: string } | null;
+  profiles?: { full_name: string; email: string } | null;
+  content?: string;
+  response?: string;
+  duration_minutes?: number;
+  pages_count?: number;
+  word_count?: number;
+  audio_url?: string;
+  image_url?: string;
 }
 
 interface Stats {
@@ -98,6 +106,9 @@ const AdminDashboard = () => {
   });
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
+  const [selectedUser, setSelectedUser] = useState<User | null>(null);
+  const [showUserDetails, setShowUserDetails] = useState(false);
+  const [userHistory, setUserHistory] = useState<AIRequest[]>([]);
   const navigate = useNavigate();
   const { toast } = useToast();
 
@@ -314,6 +325,83 @@ const AdminDashboard = () => {
       toast({
         title: "خطأ",
         description: "حدث خطأ في إنشاء الاشتراك",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const viewUserHistory = async (user: User) => {
+    try {
+      setSelectedUser(user);
+      setShowUserDetails(true);
+      
+      // جلب سجل المستخدم
+      const { data: historyData } = await supabase
+        .from("ai_requests")
+        .select("*")
+        .eq("user_id", user.user_id)
+        .order("created_at", { ascending: false })
+        .limit(50);
+
+      if (historyData) {
+        setUserHistory(historyData.map(item => ({ ...item, profiles: null })));
+      }
+    } catch (error: any) {
+      toast({
+        title: "خطأ",
+        description: "حدث خطأ في جلب سجل المستخدم",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const deleteUser = async (userId: string) => {
+    if (!confirm("هل أنت متأكد من حذف هذا المستخدم؟")) return;
+    
+    try {
+      const { error } = await supabase
+        .from("profiles")
+        .delete()
+        .eq("user_id", userId);
+
+      if (error) throw error;
+
+      toast({
+        title: "تم الحذف",
+        description: "تم حذف المستخدم بنجاح",
+      });
+
+      await loadAdminData();
+    } catch (error: any) {
+      toast({
+        title: "خطأ",
+        description: "حدث خطأ في حذف المستخدم",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const cancelSubscription = async (subscriptionId: string) => {
+    if (!confirm("هل أنت متأكد من إلغاء هذا الاشتراك؟")) return;
+    
+    try {
+      const { error } = await supabase
+        .from("subscriptions")
+        .update({ status: 'cancelled' })
+        .eq("id", subscriptionId);
+
+      if (error) throw error;
+
+      toast({
+        title: "تم الإلغاء",
+        description: "تم إلغاء الاشتراك بنجاح",
+      });
+
+      await loadAdminData();
+    } catch (error: any) {
+      toast({
+        title: "خطأ",
+        description: "حدث خطأ في إلغاء الاشتراك",
         variant: "destructive",
       });
     }
@@ -580,20 +668,36 @@ const AdminDashboard = () => {
                              >
                                تعديل الرصيد
                              </Button>
-                             <Button
-                               variant="outline"
-                               size="sm"
-                               onClick={() => {
-                                 const planName = prompt('اسم الباقة:', 'باقة مميزة');
-                                 const credits = prompt('عدد النقاط:', '100');
-                                 const price = prompt('السعر:', '10');
-                                 if (planName && credits && price && !isNaN(Number(credits)) && !isNaN(Number(price))) {
-                                   createSubscription(user.user_id, planName, Number(credits), Number(price));
-                                 }
-                               }}
-                             >
-                               إضافة اشتراك
-                             </Button>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => viewUserHistory(user)}
+                              >
+                                <Eye className="h-4 w-4 mr-2" />
+                                عرض السجل
+                              </Button>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => {
+                                  const planName = prompt('اسم الباقة:', 'باقة مميزة');
+                                  const credits = prompt('عدد النقاط:', '100');
+                                  const price = prompt('السعر:', '10');
+                                  if (planName && credits && price && !isNaN(Number(credits)) && !isNaN(Number(price))) {
+                                    createSubscription(user.user_id, planName, Number(credits), Number(price));
+                                  }
+                                }}
+                              >
+                                إضافة اشتراك
+                              </Button>
+                              <Button
+                                variant="destructive"
+                                size="sm"
+                                onClick={() => deleteUser(user.user_id)}
+                              >
+                                <Trash2 className="h-4 w-4 mr-2" />
+                                حذف
+                              </Button>
                            </div>
                          </TableCell>
                       </TableRow>
@@ -617,9 +721,10 @@ const AdminDashboard = () => {
                       <TableHead>المستخدم</TableHead>
                       <TableHead>الباقة</TableHead>
                       <TableHead>الكريدت</TableHead>
-                      <TableHead>السعر</TableHead>
-                      <TableHead>الحالة</TableHead>
-                      <TableHead>تاريخ الاشتراك</TableHead>
+                       <TableHead>السعر</TableHead>
+                       <TableHead>الحالة</TableHead>
+                       <TableHead>تاريخ الاشتراك</TableHead>
+                       <TableHead>الإجراءات</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -639,9 +744,20 @@ const AdminDashboard = () => {
                             {subscription.status === 'active' ? 'نشط' : subscription.status === 'expired' ? 'منتهي' : 'ملغي'}
                           </Badge>
                         </TableCell>
-                        <TableCell>
-                          {new Date(subscription.created_at).toLocaleDateString('ar-SA')}
-                        </TableCell>
+                         <TableCell>
+                           {new Date(subscription.created_at).toLocaleDateString('ar-SA')}
+                         </TableCell>
+                         <TableCell>
+                           <div className="flex gap-2">
+                             <Button
+                               variant="destructive"
+                               size="sm"
+                               onClick={() => cancelSubscription(subscription.id)}
+                             >
+                               إلغاء
+                             </Button>
+                           </div>
+                         </TableCell>
                       </TableRow>
                     ))}
                   </TableBody>
@@ -976,6 +1092,114 @@ const AdminDashboard = () => {
             </div>
           </TabsContent>
         </Tabs>
+
+        {/* User Details Dialog */}
+        <Dialog open={showUserDetails} onOpenChange={setShowUserDetails}>
+          <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle>سجل المستخدم: {selectedUser?.full_name}</DialogTitle>
+              <DialogDescription>
+                {selectedUser?.email} - إجمالي الاستخدام: {selectedUser?.total_credits_used} كريدت
+              </DialogDescription>
+            </DialogHeader>
+            
+            <div className="space-y-6">
+              {/* User Stats */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <Card>
+                  <CardContent className="p-4">
+                    <div className="text-center">
+                      <div className="text-2xl font-bold text-primary">{selectedUser?.credits}</div>
+                      <div className="text-sm text-muted-foreground">الرصيد الحالي</div>
+                    </div>
+                  </CardContent>
+                </Card>
+                <Card>
+                  <CardContent className="p-4">
+                    <div className="text-center">
+                      <div className="text-2xl font-bold text-warning">{selectedUser?.total_credits_used}</div>
+                      <div className="text-sm text-muted-foreground">إجمالي الاستخدام</div>
+                    </div>
+                  </CardContent>
+                </Card>
+                <Card>
+                  <CardContent className="p-4">
+                    <div className="text-center">
+                      <div className="text-2xl font-bold text-success">{userHistory.length}</div>
+                      <div className="text-sm text-muted-foreground">عدد الطلبات</div>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+
+              {/* Activity History */}
+              <Card>
+                <CardHeader>
+                  <CardTitle>سجل النشاطات</CardTitle>
+                  <CardDescription>آخر {userHistory.length} عملية</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>نوع الطلب</TableHead>
+                        <TableHead>المحتوى</TableHead>
+                        <TableHead>الكريدت</TableHead>
+                        <TableHead>التاريخ</TableHead>
+                        <TableHead>الحالة</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {userHistory.map((request) => (
+                        <TableRow key={request.id}>
+                          <TableCell>
+                            <Badge variant="outline">
+                              {request.request_type === 'text_question' && 'سؤال نصي'}
+                              {request.request_type === 'image_question' && 'سؤال صورة'}
+                              {request.request_type === 'audio_summary' && 'تلخيص صوتي'}
+                              {request.request_type === 'mind_map' && 'خريطة ذهنية'}
+                              {request.request_type === 'chat_explanation' && 'شرح ذكي'}
+                              {request.request_type === 'research_paper' && 'بحث أكاديمي'}
+                              {request.request_type === 'text_editing' && 'تحرير نص'}
+                            </Badge>
+                          </TableCell>
+                          <TableCell>
+                            <div className="max-w-xs truncate">
+                              {request.content || 'لا يوجد محتوى'}
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            <span className="font-medium">{request.credits_used}</span>
+                          </TableCell>
+                          <TableCell>
+                            {new Date(request.created_at).toLocaleDateString('ar-SA', {
+                              year: 'numeric',
+                              month: 'short',
+                              day: 'numeric',
+                              hour: '2-digit',
+                              minute: '2-digit'
+                            })}
+                          </TableCell>
+                          <TableCell>
+                            <Badge variant="default" className="bg-success text-success-foreground">
+                              مكتمل
+                            </Badge>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                  
+                  {userHistory.length === 0 && (
+                    <div className="text-center py-8 text-muted-foreground">
+                      لا يوجد نشاطات مسجلة لهذا المستخدم
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </div>
+          </DialogContent>
+        </Dialog>
       </div>
     </div>
   );
