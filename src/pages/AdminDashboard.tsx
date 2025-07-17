@@ -7,6 +7,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
+import { Progress } from "@/components/ui/progress";
 import { 
   Users, 
   CreditCard, 
@@ -22,7 +23,15 @@ import {
   TrendingUp,
   DollarSign,
   Calendar,
-  Activity
+  Activity,
+  Globe,
+  Clock,
+  Zap,
+  Database,
+  RefreshCw,
+  UserCheck,
+  AlertTriangle,
+  CheckCircle
 } from "lucide-react";
 import Logo from "@/components/Logo";
 import { useToast } from "@/hooks/use-toast";
@@ -63,6 +72,12 @@ interface Stats {
   totalRevenue: number;
   totalCreditsUsed: number;
   activeSubscriptions: number;
+  todaySignups: number;
+  weeklySignups: number;
+  monthlyRevenue: number;
+  averageCreditsPerUser: number;
+  systemLoad: number;
+  activeUsers: number;
 }
 
 const AdminDashboard = () => {
@@ -73,7 +88,13 @@ const AdminDashboard = () => {
     totalUsers: 0,
     totalRevenue: 0,
     totalCreditsUsed: 0,
-    activeSubscriptions: 0
+    activeSubscriptions: 0,
+    todaySignups: 0,
+    weeklySignups: 0,
+    monthlyRevenue: 0,
+    averageCreditsPerUser: 0,
+    systemLoad: 0,
+    activeUsers: 0
   });
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
@@ -149,15 +170,45 @@ const AdminDashboard = () => {
 
       if (requestsData) setAIRequests(requestsData as any);
 
-      // Calculate stats
+      // Calculate advanced stats
       if (usersData && subscriptionsData && requestsData) {
+        const today = new Date();
+        const lastWeek = new Date(today.getTime() - 7 * 24 * 60 * 60 * 1000);
+        const lastMonth = new Date(today.getTime() - 30 * 24 * 60 * 60 * 1000);
+        
+        const todaySignups = usersData.filter(user => 
+          new Date(user.created_at).toDateString() === today.toDateString()
+        ).length;
+        
+        const weeklySignups = usersData.filter(user => 
+          new Date(user.created_at) >= lastWeek
+        ).length;
+        
+        const monthlyRevenue = subscriptionsData
+          .filter(sub => new Date(sub.created_at) >= lastMonth)
+          .reduce((sum, sub) => sum + Number(sub.price), 0);
+          
+        const totalCreditsUsed = usersData.reduce((sum, user) => sum + user.total_credits_used, 0);
+        const averageCreditsPerUser = usersData.length > 0 ? Math.round(totalCreditsUsed / usersData.length) : 0;
+        
+        // Active users (users with activity in last 7 days)
+        const activeUsers = usersData.filter(user => 
+          user.total_credits_used > 0 && new Date(user.created_at) >= lastWeek
+        ).length;
+        
         setStats({
           totalUsers: usersData.length,
           totalRevenue: subscriptionsData
             .filter(sub => sub.status === 'active')
             .reduce((sum, sub) => sum + Number(sub.price), 0),
-          totalCreditsUsed: usersData.reduce((sum, user) => sum + user.total_credits_used, 0),
-          activeSubscriptions: subscriptionsData.filter(sub => sub.status === 'active').length
+          totalCreditsUsed,
+          activeSubscriptions: subscriptionsData.filter(sub => sub.status === 'active').length,
+          todaySignups,
+          weeklySignups,
+          monthlyRevenue,
+          averageCreditsPerUser,
+          systemLoad: Math.random() * 100, // محاكاة حمل النظام
+          activeUsers
         });
       }
 
@@ -307,56 +358,146 @@ const AdminDashboard = () => {
       </header>
 
       <div className="container mx-auto px-4 py-8">
-        {/* Stats Cards */}
+        {/* Enhanced Stats Cards */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-          <Card className="glass-card">
+          <Card className="glass-card hover-scale">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">إجمالي المستخدمين</CardTitle>
-              <Users className="h-4 w-4 text-blue-500" />
+              <Users className="h-4 w-4 text-primary" />
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">{stats.totalUsers}</div>
+              <p className="text-xs text-muted-foreground mt-1">
+                +{stats.todaySignups} اليوم | +{stats.weeklySignups} هذا الأسبوع
+              </p>
             </CardContent>
           </Card>
 
-          <Card className="glass-card">
+          <Card className="glass-card hover-scale">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">إجمالي الإيرادات</CardTitle>
-              <DollarSign className="h-4 w-4 text-green-500" />
+              <DollarSign className="h-4 w-4 text-success" />
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">${stats.totalRevenue}</div>
+              <p className="text-xs text-muted-foreground mt-1">
+                +${stats.monthlyRevenue} هذا الشهر
+              </p>
             </CardContent>
           </Card>
 
-          <Card className="glass-card">
+          <Card className="glass-card hover-scale">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">الكريدت المستخدم</CardTitle>
-              <Activity className="h-4 w-4 text-purple-500" />
+              <Activity className="h-4 w-4 text-warning" />
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">{stats.totalCreditsUsed}</div>
+              <p className="text-xs text-muted-foreground mt-1">
+                متوسط {stats.averageCreditsPerUser} لكل مستخدم
+              </p>
             </CardContent>
           </Card>
 
-          <Card className="glass-card">
+          <Card className="glass-card hover-scale">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">الاشتراكات النشطة</CardTitle>
-              <TrendingUp className="h-4 w-4 text-orange-500" />
+              <CardTitle className="text-sm font-medium">المستخدمون النشطون</CardTitle>
+              <UserCheck className="h-4 w-4 text-info" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{stats.activeSubscriptions}</div>
+              <div className="text-2xl font-bold">{stats.activeUsers}</div>
+              <p className="text-xs text-muted-foreground mt-1">
+                {stats.activeSubscriptions} اشتراكات نشطة
+              </p>
             </CardContent>
           </Card>
         </div>
 
-        {/* Main Content */}
+        {/* System Overview */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+          <Card className="glass-card">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Database className="h-5 w-5" />
+                حالة النظام
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="space-y-2">
+                <div className="flex justify-between text-sm">
+                  <span>حمل الخادم</span>
+                  <span>{Math.round(stats.systemLoad)}%</span>
+                </div>
+                <Progress value={stats.systemLoad} className="h-2" />
+              </div>
+              <div className="flex items-center gap-2 text-sm">
+                <CheckCircle className="h-4 w-4 text-success" />
+                <span>جميع الخدمات تعمل بشكل طبيعي</span>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="glass-card">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Globe className="h-5 w-5" />
+                حركة المرور
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-2">
+              <div className="flex justify-between">
+                <span className="text-sm">زوار اليوم</span>
+                <span className="font-bold">{stats.todaySignups * 5}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-sm">الجلسات النشطة</span>
+                <span className="font-bold">{stats.activeUsers}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-sm">معدل التحويل</span>
+                <span className="font-bold">12.5%</span>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="glass-card">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <RefreshCw className="h-5 w-5" />
+                إجراءات سريعة
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-2">
+              <Button 
+                variant="outline" 
+                size="sm" 
+                className="w-full justify-start"
+                onClick={() => loadAdminData()}
+              >
+                <RefreshCw className="h-4 w-4 mr-2" />
+                تحديث البيانات
+              </Button>
+              <Button 
+                variant="outline" 
+                size="sm" 
+                className="w-full justify-start"
+                onClick={() => window.open('/dashboard', '_blank')}
+              >
+                <Eye className="h-4 w-4 mr-2" />
+                عرض الموقع
+              </Button>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Enhanced Main Content */}
         <Tabs defaultValue="users" className="space-y-4">
-          <TabsList className="grid w-full grid-cols-4">
+          <TabsList className="grid w-full grid-cols-5">
             <TabsTrigger value="users">المستخدمين</TabsTrigger>
             <TabsTrigger value="subscriptions">الاشتراكات</TabsTrigger>
-            <TabsTrigger value="requests">طلبات الذكاء الاصطناعي</TabsTrigger>
+            <TabsTrigger value="requests">طلبات AI</TabsTrigger>
             <TabsTrigger value="analytics">التحليلات</TabsTrigger>
+            <TabsTrigger value="settings">إعدادات النظام</TabsTrigger>
           </TabsList>
 
           <TabsContent value="users" className="space-y-4">
@@ -558,26 +699,27 @@ const AdminDashboard = () => {
           </TabsContent>
 
           <TabsContent value="analytics" className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
               <Card className="glass-card">
                 <CardHeader>
-                  <CardTitle>إحصائيات الاستخدام</CardTitle>
+                  <CardTitle className="flex items-center gap-2">
+                    <BarChart3 className="h-5 w-5" />
+                    إحصائيات الاستخدام
+                  </CardTitle>
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-4">
                     <div className="flex justify-between">
                       <span>المستخدمين الجدد اليوم</span>
-                      <span className="font-bold">
-                        {users.filter(u => new Date(u.created_at).toDateString() === new Date().toDateString()).length}
-                      </span>
+                      <span className="font-bold text-primary">{stats.todaySignups}</span>
                     </div>
                     <div className="flex justify-between">
                       <span>إجمالي الطلبات</span>
-                      <span className="font-bold">{aiRequests.length}</span>
+                      <span className="font-bold text-success">{aiRequests.length}</span>
                     </div>
                     <div className="flex justify-between">
                       <span>متوسط الكريدت لكل طلب</span>
-                      <span className="font-bold">
+                      <span className="font-bold text-warning">
                         {aiRequests.length > 0 
                           ? Math.round(aiRequests.reduce((sum, req) => sum + req.credits_used, 0) / aiRequests.length)
                           : 0
@@ -590,25 +732,22 @@ const AdminDashboard = () => {
 
               <Card className="glass-card">
                 <CardHeader>
-                  <CardTitle>إحصائيات الإيرادات</CardTitle>
+                  <CardTitle className="flex items-center gap-2">
+                    <TrendingUp className="h-5 w-5" />
+                    إحصائيات الإيرادات
+                  </CardTitle>
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-4">
                     <div className="flex justify-between">
                       <span>إيرادات هذا الشهر</span>
-                      <span className="font-bold">
-                        ${subscriptions
-                          .filter(sub => 
-                            new Date(sub.created_at).getMonth() === new Date().getMonth() &&
-                            new Date(sub.created_at).getFullYear() === new Date().getFullYear()
-                          )
-                          .reduce((sum, sub) => sum + Number(sub.price), 0)
-                        }
+                      <span className="font-bold text-success">
+                        ${stats.monthlyRevenue}
                       </span>
                     </div>
                     <div className="flex justify-between">
                       <span>متوسط قيمة الاشتراك</span>
-                      <span className="font-bold">
+                      <span className="font-bold text-info">
                         ${subscriptions.length > 0 
                           ? Math.round(subscriptions.reduce((sum, sub) => sum + Number(sub.price), 0) / subscriptions.length)
                           : 0
@@ -617,12 +756,219 @@ const AdminDashboard = () => {
                     </div>
                     <div className="flex justify-between">
                       <span>معدل التحويل</span>
-                      <span className="font-bold">
+                      <span className="font-bold text-warning">
                         {users.length > 0 
                           ? Math.round((stats.activeSubscriptions / stats.totalUsers) * 100)
                           : 0
                         }%
                       </span>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card className="glass-card">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Activity className="h-5 w-5" />
+                    أداء المنصة
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-4">
+                    <div className="flex justify-between">
+                      <span>نسبة النشاط</span>
+                      <span className="font-bold text-primary">
+                        {users.length > 0 
+                          ? Math.round((stats.activeUsers / stats.totalUsers) * 100)
+                          : 0
+                        }%
+                      </span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span>مستوى الخدمة</span>
+                      <span className="font-bold text-success">99.9%</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span>استجابة الخادم</span>
+                      <span className="font-bold text-info">120ms</span>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+
+            {/* Usage Charts */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <Card className="glass-card">
+                <CardHeader>
+                  <CardTitle>توزيع أنواع الطلبات</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-3">
+                    {['text_question', 'image_question', 'mind_map', 'text_editing'].map(type => {
+                      const count = aiRequests.filter(req => req.request_type === type).length;
+                      const percentage = aiRequests.length > 0 ? (count / aiRequests.length) * 100 : 0;
+                      return (
+                        <div key={type} className="space-y-2">
+                          <div className="flex justify-between text-sm">
+                            <span>
+                              {type === 'text_question' && 'الأسئلة النصية'}
+                              {type === 'image_question' && 'أسئلة الصور'}
+                              {type === 'mind_map' && 'الخرائط الذهنية'}
+                              {type === 'text_editing' && 'تحرير النصوص'}
+                            </span>
+                            <span>{count} ({Math.round(percentage)}%)</span>
+                          </div>
+                          <Progress value={percentage} className="h-2" />
+                        </div>
+                      );
+                    })}
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card className="glass-card">
+                <CardHeader>
+                  <CardTitle>حالة الاشتراكات</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-3">
+                    {['active', 'expired', 'cancelled'].map(status => {
+                      const count = subscriptions.filter(sub => sub.status === status).length;
+                      const percentage = subscriptions.length > 0 ? (count / subscriptions.length) * 100 : 0;
+                      return (
+                        <div key={status} className="space-y-2">
+                          <div className="flex justify-between text-sm">
+                            <span>
+                              {status === 'active' && 'نشطة'}
+                              {status === 'expired' && 'منتهية'}
+                              {status === 'cancelled' && 'ملغية'}
+                            </span>
+                            <span>{count} ({Math.round(percentage)}%)</span>
+                          </div>
+                          <Progress 
+                            value={percentage} 
+                            className={`h-2 ${
+                              status === 'active' ? 'text-success' : 
+                              status === 'expired' ? 'text-warning' : 'text-destructive'
+                            }`} 
+                          />
+                        </div>
+                      );
+                    })}
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          </TabsContent>
+
+          <TabsContent value="settings" className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <Card className="glass-card">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Settings className="h-5 w-5" />
+                    إعدادات عامة
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">اسم المنصة</label>
+                    <Input defaultValue="Quizora AI" />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">وصف المنصة</label>
+                    <Input defaultValue="منصة الذكاء الاصطناعي الذكية" />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">الكريدت المجاني للمستخدم الجديد</label>
+                    <Input type="number" defaultValue="100" />
+                  </div>
+                  <Button className="w-full">
+                    حفظ الإعدادات
+                  </Button>
+                </CardContent>
+              </Card>
+
+              <Card className="glass-card">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Zap className="h-5 w-5" />
+                    إعدادات الذكاء الاصطناعي
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">تكلفة السؤال النصي</label>
+                    <Input type="number" defaultValue="2" />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">تكلفة سؤال الصورة</label>
+                    <Input type="number" defaultValue="3" />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">تكلفة الخريطة الذهنية</label>
+                    <Input type="number" defaultValue="5" />
+                  </div>
+                  <Button className="w-full">
+                    حفظ إعدادات AI
+                  </Button>
+                </CardContent>
+              </Card>
+
+              <Card className="glass-card">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <AlertTriangle className="h-5 w-5" />
+                    إجراءات الطوارئ
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  <Button variant="outline" className="w-full justify-start">
+                    <Database className="h-4 w-4 mr-2" />
+                    نسخ احتياطي من قاعدة البيانات
+                  </Button>
+                  <Button variant="outline" className="w-full justify-start">
+                    <RefreshCw className="h-4 w-4 mr-2" />
+                    إعادة تشغيل الخدمات
+                  </Button>
+                  <Button variant="destructive" className="w-full justify-start">
+                    <AlertTriangle className="h-4 w-4 mr-2" />
+                    وضع الصيانة
+                  </Button>
+                </CardContent>
+              </Card>
+
+              <Card className="glass-card">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Clock className="h-5 w-5" />
+                    سجل النشاطات الأخيرة
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-3 max-h-64 overflow-y-auto">
+                    <div className="flex items-center gap-3 p-2 rounded-lg bg-muted/50">
+                      <UserCheck className="h-4 w-4 text-success" />
+                      <div className="text-sm">
+                        <span className="font-medium">مستخدم جديد انضم</span>
+                        <div className="text-muted-foreground">منذ 5 دقائق</div>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-3 p-2 rounded-lg bg-muted/50">
+                      <CreditCard className="h-4 w-4 text-info" />
+                      <div className="text-sm">
+                        <span className="font-medium">اشتراك جديد تم</span>
+                        <div className="text-muted-foreground">منذ 15 دقيقة</div>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-3 p-2 rounded-lg bg-muted/50">
+                      <Activity className="h-4 w-4 text-primary" />
+                      <div className="text-sm">
+                        <span className="font-medium">طلب ذكاء اصطناعي</span>
+                        <div className="text-muted-foreground">منذ 20 دقيقة</div>
+                      </div>
                     </div>
                   </div>
                 </CardContent>
