@@ -159,30 +159,52 @@ const AdminDashboard = () => {
       console.log("Users Data:", usersData, "Error:", usersError);
       if (usersData) setUsers(usersData);
 
-      // Load subscriptions with user info
+      // Load subscriptions without foreign key relationship
       const { data: subscriptionsData, error: subsError } = await supabase
         .from("subscriptions")
-        .select(`
-          *,
-          profiles:user_id (full_name, email)
-        `)
+        .select("*")
         .order("created_at", { ascending: false });
 
       console.log("Subscriptions Data:", subscriptionsData, "Error:", subsError);
-      if (subscriptionsData) setSubscriptions(subscriptionsData as any);
+      
+      // Manually get user info for subscriptions
+      if (subscriptionsData) {
+        const subsWithUserInfo = await Promise.all(
+          subscriptionsData.map(async (sub: any) => {
+            const { data: userProfile } = await supabase
+              .from("profiles")
+              .select("full_name, email")
+              .eq("user_id", sub.user_id)
+              .single();
+            return { ...sub, profiles: userProfile };
+          })
+        );
+        setSubscriptions(subsWithUserInfo);
+      }
 
-      // Load AI requests with user info
+      // Load AI requests without foreign key relationship
       const { data: requestsData, error: reqError } = await supabase
         .from("ai_requests")
-        .select(`
-          *,
-          profiles:user_id (full_name, email)
-        `)
+        .select("*")
         .order("created_at", { ascending: false })
         .limit(100);
 
       console.log("Requests Data:", requestsData, "Error:", reqError);
-      if (requestsData) setAIRequests(requestsData as any);
+      
+      // Manually get user info for requests
+      if (requestsData) {
+        const reqsWithUserInfo = await Promise.all(
+          requestsData.map(async (req: any) => {
+            const { data: userProfile } = await supabase
+              .from("profiles")
+              .select("full_name, email")
+              .eq("user_id", req.user_id)
+              .single();
+            return { ...req, profiles: userProfile };
+          })
+        );
+        setAIRequests(reqsWithUserInfo);
+      }
 
       // Calculate advanced stats
       if (usersData && subscriptionsData && requestsData) {
