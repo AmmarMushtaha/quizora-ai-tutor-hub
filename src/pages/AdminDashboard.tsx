@@ -333,48 +333,98 @@ const AdminDashboard = () => {
     }
   };
 
-  const createSubscription = async (userId: string, planName: string, credits: number, price: number) => {
+  const createSubscription = async (userId: string, planName: string, credits: number, price: number, durationDays: number = 30) => {
     try {
-      // إنشاء اشتراك جديد
-      const { error: subError } = await supabase
-        .from("subscriptions")
-        .insert({
-          user_id: userId,
-          plan_name: planName,
-          credits_included: credits,
-          price: price,
-          status: 'active',
-          end_date: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString() // 30 يوم
-        });
-
-      if (subError) throw subError;
-
-      // إضافة الرصيد للمستخدم
-      const { data: currentUser } = await supabase
+      console.log("Creating subscription for user:", userId, "Plan:", planName, "Credits:", credits, "Price:", price);
+      
+      // التحقق من وجود المستخدم
+      const { data: userExists, error: userCheckError } = await supabase
         .from("profiles")
-        .select("credits")
+        .select("id, credits, full_name, email")
         .eq("user_id", userId)
         .single();
-        
-      if (currentUser) {
-        const { error: creditError } = await supabase
-          .from("profiles")
-          .update({ credits: currentUser.credits + credits })
-          .eq("user_id", userId);
-          
-        if (creditError) throw creditError;
+
+      if (userCheckError || !userExists) {
+        throw new Error("المستخدم غير موجود");
       }
 
+      console.log("User found:", userExists);
+
+      // التحقق من وجود اشتراك نشط
+      const { data: existingSubscriptions } = await supabase
+        .from("subscriptions")
+        .select("*")
+        .eq("user_id", userId)
+        .eq("status", "active");
+
+      if (existingSubscriptions && existingSubscriptions.length > 0) {
+        // إنهاء الاشتراكات النشطة أولاً
+        const { error: endError } = await supabase
+          .from("subscriptions")
+          .update({ status: 'expired' })
+          .eq("user_id", userId)
+          .eq("status", "active");
+
+        if (endError) {
+          console.error("Error ending existing subscriptions:", endError);
+        } else {
+          console.log("Ended existing active subscriptions");
+        }
+      }
+
+      // إنشاء اشتراك جديد
+      const endDate = new Date(Date.now() + durationDays * 24 * 60 * 60 * 1000);
+      const subscriptionData = {
+        user_id: userId,
+        plan_name: planName,
+        credits_included: credits,
+        price: Number(price),
+        status: 'active' as const,
+        start_date: new Date().toISOString(),
+        end_date: endDate.toISOString(),
+        bonus_credits: 0
+      };
+
+      console.log("Inserting subscription:", subscriptionData);
+
+      const { data: newSubscription, error: subError } = await supabase
+        .from("subscriptions")
+        .insert(subscriptionData)
+        .select()
+        .single();
+
+      if (subError) {
+        console.error("Subscription insert error:", subError);
+        throw new Error(`خطأ في إنشاء الاشتراك: ${subError.message}`);
+      }
+
+      console.log("Subscription created:", newSubscription);
+
+      // إضافة الرصيد للمستخدم
+      const newCreditsTotal = userExists.credits + credits;
+      const { error: creditError } = await supabase
+        .from("profiles")
+        .update({ credits: newCreditsTotal })
+        .eq("user_id", userId);
+        
+      if (creditError) {
+        console.error("Credits update error:", creditError);
+        throw new Error(`خطأ في تحديث الرصيد: ${creditError.message}`);
+      }
+
+      console.log("Credits updated successfully. New total:", newCreditsTotal);
+
       toast({
-        title: "تم الإنشاء",
-        description: "تم إنشاء الاشتراك بنجاح",
+        title: "تم الإنشاء بنجاح",
+        description: `تم إنشاء اشتراك ${planName} للمستخدم ${userExists.full_name} بـ ${credits} كريدت`,
       });
 
       await loadAdminData();
     } catch (error: any) {
+      console.error("Create subscription error:", error);
       toast({
-        title: "خطأ",
-        description: "حدث خطأ في إنشاء الاشتراك",
+        title: "خطأ في إنشاء الاشتراك",
+        description: error.message || "حدث خطأ غير متوقع",
         variant: "destructive",
       });
     }
