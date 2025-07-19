@@ -151,15 +151,16 @@ const AdminDashboard = () => {
   const loadAdminData = async () => {
     try {
       // Load users
-      const { data: usersData } = await supabase
+      const { data: usersData, error: usersError } = await supabase
         .from("profiles")
         .select("*")
         .order("created_at", { ascending: false });
 
+      console.log("Users Data:", usersData, "Error:", usersError);
       if (usersData) setUsers(usersData);
 
       // Load subscriptions with user info
-      const { data: subscriptionsData } = await supabase
+      const { data: subscriptionsData, error: subsError } = await supabase
         .from("subscriptions")
         .select(`
           *,
@@ -167,10 +168,11 @@ const AdminDashboard = () => {
         `)
         .order("created_at", { ascending: false });
 
+      console.log("Subscriptions Data:", subscriptionsData, "Error:", subsError);
       if (subscriptionsData) setSubscriptions(subscriptionsData as any);
 
       // Load AI requests with user info
-      const { data: requestsData } = await supabase
+      const { data: requestsData, error: reqError } = await supabase
         .from("ai_requests")
         .select(`
           *,
@@ -179,6 +181,7 @@ const AdminDashboard = () => {
         .order("created_at", { ascending: false })
         .limit(100);
 
+      console.log("Requests Data:", requestsData, "Error:", reqError);
       if (requestsData) setAIRequests(requestsData as any);
 
       // Calculate advanced stats
