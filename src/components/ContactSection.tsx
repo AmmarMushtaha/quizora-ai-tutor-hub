@@ -21,7 +21,7 @@ const ContactSection = () => {
     {
       icon: Phone,
       title: "الهاتف",
-      value: "+966 50 123 4567",
+      value: "+9705569044096",
       description: "من الأحد إلى الخميس"
     },
     {
