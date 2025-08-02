@@ -8,7 +8,9 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Progress } from "@/components/ui/progress";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogTrigger } from "@/components/ui/dialog";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Label } from "@/components/ui/label";
 import { 
   Users, 
   CreditCard, 
@@ -109,8 +111,46 @@ const AdminDashboard = () => {
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const [showUserDetails, setShowUserDetails] = useState(false);
   const [userHistory, setUserHistory] = useState<AIRequest[]>([]);
+  const [newSubscription, setNewSubscription] = useState({
+    userId: '',
+    planName: '',
+    credits: 0,
+    price: 0
+  });
   const navigate = useNavigate();
   const { toast } = useToast();
+
+  // بيانات الباقات المتاحة من PricingSection
+  const subscriptionPlans = [
+    {
+      name: "التجربة المجانية",
+      credits: 100,
+      price: 0,
+      isPopular: false,
+      duration: "أسبوع واحد"
+    },
+    {
+      name: "الباقة الأساسية",
+      credits: 2000,
+      price: 20,
+      isPopular: false,
+      duration: "شهرياً"
+    },
+    {
+      name: "الباقة المتقدمة",
+      credits: 5000,
+      price: 39,
+      isPopular: true,
+      duration: "شهرياً"
+    },
+    {
+      name: "الباقة الاحترافية",
+      credits: 12000,
+      price: 99,
+      isPopular: false,
+      duration: "شهرياً"
+    }
+  ];
 
   useEffect(() => {
     checkAdminAccess();
@@ -776,20 +816,125 @@ const AdminDashboard = () => {
                                 <Eye className="h-4 w-4 mr-2" />
                                 عرض السجل
                               </Button>
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => {
-                                  const planName = prompt('اسم الباقة:', 'باقة مميزة');
-                                  const credits = prompt('عدد النقاط:', '100');
-                                  const price = prompt('السعر:', '10');
-                                  if (planName && credits && price && !isNaN(Number(credits)) && !isNaN(Number(price))) {
-                                    createSubscription(user.user_id, planName, Number(credits), Number(price));
-                                  }
-                                }}
-                              >
-                                إضافة اشتراك
-                              </Button>
+                              <Dialog>
+                                <DialogTrigger asChild>
+                                  <Button variant="outline" size="sm">
+                                    إضافة اشتراك
+                                  </Button>
+                                </DialogTrigger>
+                                <DialogContent className="max-w-md">
+                                  <DialogHeader>
+                                    <DialogTitle>إضافة اشتراك جديد</DialogTitle>
+                                    <DialogDescription>
+                                      اختر باقة مناسبة للمستخدم {user.full_name}
+                                    </DialogDescription>
+                                  </DialogHeader>
+                                  <div className="space-y-4">
+                                    <div>
+                                      <Label htmlFor="planSelect">اختر الباقة</Label>
+                                      <Select
+                                        value={newSubscription.planName}
+                                        onValueChange={(value) => {
+                                          const selectedPlan = subscriptionPlans.find(plan => plan.name === value);
+                                          if (selectedPlan) {
+                                            setNewSubscription({
+                                              userId: user.user_id,
+                                              planName: value,
+                                              credits: selectedPlan.credits,
+                                              price: selectedPlan.price
+                                            });
+                                          }
+                                        }}
+                                      >
+                                        <SelectTrigger>
+                                          <SelectValue placeholder="اختر الباقة" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                          {subscriptionPlans.map((plan) => (
+                                            <SelectItem key={plan.name} value={plan.name}>
+                                              <div className="flex items-center gap-2 w-full">
+                                                {plan.isPopular && (
+                                                  <Badge className="bg-gradient-to-r from-primary to-accent text-white text-xs">
+                                                    شائع
+                                                  </Badge>
+                                                )}
+                                                <div className="flex flex-col">
+                                                  <span className="font-medium">{plan.name}</span>
+                                                  <span className="text-xs text-muted-foreground">
+                                                    {plan.credits.toLocaleString()} كريدت - {plan.price === 0 ? 'مجاناً' : `$${plan.price}`}
+                                                  </span>
+                                                </div>
+                                              </div>
+                                            </SelectItem>
+                                          ))}
+                                        </SelectContent>
+                                      </Select>
+                                    </div>
+                                    
+                                    {/* معاينة الباقة المختارة */}
+                                    {newSubscription.planName && (
+                                      <div className={`p-4 border rounded-lg ${
+                                        subscriptionPlans.find(p => p.name === newSubscription.planName)?.isPopular 
+                                          ? 'bg-gradient-to-br from-primary/5 to-accent/5 border-primary/20' 
+                                          : 'bg-muted/50'
+                                      }`}>
+                                        <div className="flex items-center gap-2 mb-2">
+                                          <span className="font-medium">معاينة الباقة:</span>
+                                          {subscriptionPlans.find(p => p.name === newSubscription.planName)?.isPopular && (
+                                            <Badge className="bg-gradient-to-r from-primary to-accent text-white">
+                                              الأكثر شعبية
+                                            </Badge>
+                                          )}
+                                        </div>
+                                        <div className="space-y-2 text-sm">
+                                          <div className="flex justify-between">
+                                            <span className="text-muted-foreground">الباقة:</span>
+                                            <span className="font-medium">{newSubscription.planName}</span>
+                                          </div>
+                                          <div className="flex justify-between">
+                                            <span className="text-muted-foreground">الكريدت:</span>
+                                            <span className="font-medium">{newSubscription.credits.toLocaleString()} كريدت</span>
+                                          </div>
+                                          <div className="flex justify-between">
+                                            <span className="text-muted-foreground">السعر:</span>
+                                            <span className="font-medium">
+                                              {newSubscription.price === 0 ? 'مجاناً' : `$${newSubscription.price}`}
+                                            </span>
+                                          </div>
+                                        </div>
+                                      </div>
+                                    )}
+                                    
+                                    <Button 
+                                      onClick={() => {
+                                        createSubscription(
+                                          user.user_id, 
+                                          newSubscription.planName, 
+                                          newSubscription.credits, 
+                                          newSubscription.price
+                                        );
+                                        setNewSubscription({
+                                          userId: '',
+                                          planName: '',
+                                          credits: 0,
+                                          price: 0
+                                        });
+                                      }}
+                                      className={`w-full ${
+                                        subscriptionPlans.find(p => p.name === newSubscription.planName)?.isPopular 
+                                          ? 'btn-glow' 
+                                          : ''
+                                      }`}
+                                      disabled={!newSubscription.planName}
+                                    >
+                                      {subscriptionPlans.find(p => p.name === newSubscription.planName)?.isPopular && (
+                                        <Crown className="h-4 w-4 mr-2" />
+                                      )}
+                                      إضافة الاشتراك
+                                    </Button>
+                                  </div>
+                                </DialogContent>
+                              </Dialog>
                               <Button
                                 variant="destructive"
                                 size="sm"
