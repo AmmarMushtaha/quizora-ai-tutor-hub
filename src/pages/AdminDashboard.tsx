@@ -232,6 +232,12 @@ const AdminDashboard = () => {
             return { ...sub, profiles: userProfile };
           })
         );
+        console.log("Subscriptions with user info:", subsWithUserInfo?.map(s => ({
+          id: s.id, 
+          status: s.status, 
+          plan_name: s.plan_name,
+          user_email: s.profiles?.email
+        })));
         setSubscriptions(subsWithUserInfo);
       }
 
@@ -580,6 +586,9 @@ const AdminDashboard = () => {
       if (updateError) throw updateError;
 
       console.log("Subscription cancelled successfully");
+      
+      // إعادة تحديث البيانات فوراً لنشوف التغيير
+      console.log("Calling loadAdminData to refresh data...");
       
       toast({
         title: "تم الإلغاء",
