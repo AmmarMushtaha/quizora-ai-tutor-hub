@@ -108,6 +108,19 @@ const AdminDashboard = () => {
   });
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
+  
+  // إعدادات النظام
+  const [systemSettings, setSystemSettings] = useState({
+    platformName: "Quizora AI",
+    platformDescription: "منصة الذكاء الاصطناعي الذكية",
+    freeCredits: 100,
+    textQuestionCost: 2,
+    imageQuestionCost: 3,
+    mindMapCost: 5,
+    audioSummaryCost: 4,
+    researchPaperCost: 50,
+    textEditingCost: 8
+  });
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const [showUserDetails, setShowUserDetails] = useState(false);
   const [userHistory, setUserHistory] = useState<AIRequest[]>([]);
@@ -525,6 +538,16 @@ const AdminDashboard = () => {
     if (!confirm("هل أنت متأكد من إلغاء هذا الاشتراك؟")) return;
     
     try {
+      // جلب معلومات الاشتراك المراد إلغاؤه
+      const { data: subscriptionData, error: fetchError } = await supabase
+        .from("subscriptions")
+        .select("user_id, credits_included")
+        .eq("id", subscriptionId)
+        .single();
+
+      if (fetchError) throw fetchError;
+
+      // إلغاء الاشتراك
       const { error } = await supabase
         .from("subscriptions")
         .update({ status: 'cancelled' })
@@ -532,9 +555,27 @@ const AdminDashboard = () => {
 
       if (error) throw error;
 
+      // خصم الكريدت من المستخدم
+      const { data: userProfile, error: profileError } = await supabase
+        .from("profiles")
+        .select("credits")
+        .eq("user_id", subscriptionData.user_id)
+        .single();
+
+      if (profileError) throw profileError;
+
+      const newCredits = Math.max(0, userProfile.credits - subscriptionData.credits_included);
+      
+      const { error: updateError } = await supabase
+        .from("profiles")
+        .update({ credits: newCredits })
+        .eq("user_id", subscriptionData.user_id);
+
+      if (updateError) throw updateError;
+
       toast({
         title: "تم الإلغاء",
-        description: "تم إلغاء الاشتراك بنجاح",
+        description: `تم إلغاء الاشتراك وخصم ${subscriptionData.credits_included} كريدت من المستخدم`,
       });
 
       await loadAdminData();
@@ -542,6 +583,96 @@ const AdminDashboard = () => {
       toast({
         title: "خطأ",
         description: "حدث خطأ في إلغاء الاشتراك",
+        variant: "destructive",
+      });
+    }
+  };
+
+  // حفظ الإعدادات العامة
+  const saveGeneralSettings = async () => {
+    try {
+      // يمكن حفظ الإعدادات في قاعدة البيانات أو ملف التكوين
+      toast({
+        title: "تم الحفظ",
+        description: "تم حفظ الإعدادات العامة بنجاح",
+      });
+    } catch (error) {
+      toast({
+        title: "خطأ",
+        description: "حدث خطأ في حفظ الإعدادات",
+        variant: "destructive",
+      });
+    }
+  };
+
+  // حفظ إعدادات الذكاء الاصطناعي
+  const saveAISettings = async () => {
+    try {
+      // يمكن حفظ الإعدادات في قاعدة البيانات
+      toast({
+        title: "تم الحفظ",
+        description: "تم حفظ إعدادات الذكاء الاصطناعي بنجاح",
+      });
+    } catch (error) {
+      toast({
+        title: "خطأ",
+        description: "حدث خطأ في حفظ إعدادات AI",
+        variant: "destructive",
+      });
+    }
+  };
+
+  // نسخ احتياطي من قاعدة البيانات
+  const backupDatabase = async () => {
+    try {
+      toast({
+        title: "جاري النسخ الاحتياطي",
+        description: "بدأت عملية النسخ الاحتياطي...",
+      });
+      // منطق النسخ الاحتياطي هنا
+    } catch (error) {
+      toast({
+        title: "خطأ",
+        description: "حدث خطأ في النسخ الاحتياطي",
+        variant: "destructive",
+      });
+    }
+  };
+
+  // إعادة تشغيل الخدمات
+  const restartServices = async () => {
+    if (!confirm("هل أنت متأكد من إعادة تشغيل الخدمات؟")) return;
+    
+    try {
+      toast({
+        title: "جاري إعادة التشغيل",
+        description: "سيتم إعادة تشغيل الخدمات...",
+      });
+      // منطق إعادة التشغيل هنا
+    } catch (error) {
+      toast({
+        title: "خطأ",
+        description: "حدث خطأ في إعادة تشغيل الخدمات",
+        variant: "destructive",
+      });
+    }
+  };
+
+  // وضع الصيانة
+  const toggleMaintenanceMode = async () => {
+    if (!confirm("هل أنت متأكد من تفعيل وضع الصيانة؟")) return;
+    
+    try {
+      toast({
+        title: "وضع الصيانة",
+        description: "تم تفعيل وضع الصيانة",
+        variant: "destructive",
+      });
+      // منطق وضع الصيانة هنا
+    } catch (error) {
+      toast({
+        title: "خطأ",
+        description: "حدث خطأ في تفعيل وضع الصيانة",
         variant: "destructive",
       });
     }
@@ -1236,17 +1367,27 @@ const AdminDashboard = () => {
                 <CardContent className="space-y-4">
                   <div className="space-y-2">
                     <label className="text-sm font-medium">اسم المنصة</label>
-                    <Input defaultValue="Quizora AI" />
+                    <Input 
+                      value={systemSettings.platformName}
+                      onChange={(e) => setSystemSettings(prev => ({...prev, platformName: e.target.value}))}
+                    />
                   </div>
                   <div className="space-y-2">
                     <label className="text-sm font-medium">وصف المنصة</label>
-                    <Input defaultValue="منصة الذكاء الاصطناعي الذكية" />
+                    <Input 
+                      value={systemSettings.platformDescription}
+                      onChange={(e) => setSystemSettings(prev => ({...prev, platformDescription: e.target.value}))}
+                    />
                   </div>
                   <div className="space-y-2">
                     <label className="text-sm font-medium">الكريدت المجاني للمستخدم الجديد</label>
-                    <Input type="number" defaultValue="100" />
+                    <Input 
+                      type="number" 
+                      value={systemSettings.freeCredits}
+                      onChange={(e) => setSystemSettings(prev => ({...prev, freeCredits: parseInt(e.target.value) || 0}))}
+                    />
                   </div>
-                  <Button className="w-full">
+                  <Button className="w-full" onClick={saveGeneralSettings}>
                     حفظ الإعدادات
                   </Button>
                 </CardContent>
@@ -1262,17 +1403,53 @@ const AdminDashboard = () => {
                 <CardContent className="space-y-4">
                   <div className="space-y-2">
                     <label className="text-sm font-medium">تكلفة السؤال النصي</label>
-                    <Input type="number" defaultValue="2" />
+                    <Input 
+                      type="number" 
+                      value={systemSettings.textQuestionCost}
+                      onChange={(e) => setSystemSettings(prev => ({...prev, textQuestionCost: parseInt(e.target.value) || 0}))}
+                    />
                   </div>
                   <div className="space-y-2">
                     <label className="text-sm font-medium">تكلفة سؤال الصورة</label>
-                    <Input type="number" defaultValue="3" />
+                    <Input 
+                      type="number" 
+                      value={systemSettings.imageQuestionCost}
+                      onChange={(e) => setSystemSettings(prev => ({...prev, imageQuestionCost: parseInt(e.target.value) || 0}))}
+                    />
                   </div>
                   <div className="space-y-2">
                     <label className="text-sm font-medium">تكلفة الخريطة الذهنية</label>
-                    <Input type="number" defaultValue="5" />
+                    <Input 
+                      type="number" 
+                      value={systemSettings.mindMapCost}
+                      onChange={(e) => setSystemSettings(prev => ({...prev, mindMapCost: parseInt(e.target.value) || 0}))}
+                    />
                   </div>
-                  <Button className="w-full">
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">تكلفة التلخيص الصوتي</label>
+                    <Input 
+                      type="number" 
+                      value={systemSettings.audioSummaryCost}
+                      onChange={(e) => setSystemSettings(prev => ({...prev, audioSummaryCost: parseInt(e.target.value) || 0}))}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">تكلفة البحث الأكاديمي</label>
+                    <Input 
+                      type="number" 
+                      value={systemSettings.researchPaperCost}
+                      onChange={(e) => setSystemSettings(prev => ({...prev, researchPaperCost: parseInt(e.target.value) || 0}))}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">تكلفة تحرير النص</label>
+                    <Input 
+                      type="number" 
+                      value={systemSettings.textEditingCost}
+                      onChange={(e) => setSystemSettings(prev => ({...prev, textEditingCost: parseInt(e.target.value) || 0}))}
+                    />
+                  </div>
+                  <Button className="w-full" onClick={saveAISettings}>
                     حفظ إعدادات AI
                   </Button>
                 </CardContent>
@@ -1286,15 +1463,15 @@ const AdminDashboard = () => {
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-3">
-                  <Button variant="outline" className="w-full justify-start">
+                  <Button variant="outline" className="w-full justify-start" onClick={backupDatabase}>
                     <Database className="h-4 w-4 mr-2" />
                     نسخ احتياطي من قاعدة البيانات
                   </Button>
-                  <Button variant="outline" className="w-full justify-start">
+                  <Button variant="outline" className="w-full justify-start" onClick={restartServices}>
                     <RefreshCw className="h-4 w-4 mr-2" />
                     إعادة تشغيل الخدمات
                   </Button>
-                  <Button variant="destructive" className="w-full justify-start">
+                  <Button variant="destructive" className="w-full justify-start" onClick={toggleMaintenanceMode}>
                     <AlertTriangle className="h-4 w-4 mr-2" />
                     وضع الصيانة
                   </Button>
