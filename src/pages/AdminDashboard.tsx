@@ -537,6 +537,8 @@ const AdminDashboard = () => {
   const cancelSubscription = async (subscriptionId: string) => {
     if (!confirm("هل أنت متأكد من إلغاء هذا الاشتراك؟")) return;
     
+    console.log("Starting subscription cancellation for ID:", subscriptionId);
+    
     try {
       // جلب معلومات الاشتراك المراد إلغاؤه
       const { data: subscriptionData, error: fetchError } = await supabase
@@ -573,6 +575,8 @@ const AdminDashboard = () => {
 
       if (updateError) throw updateError;
 
+      console.log("Subscription cancelled successfully");
+      
       toast({
         title: "تم الإلغاء",
         description: `تم إلغاء الاشتراك وخصم ${subscriptionData.credits_included} كريدت من المستخدم`,
@@ -580,9 +584,10 @@ const AdminDashboard = () => {
 
       await loadAdminData();
     } catch (error: any) {
+      console.error("Error cancelling subscription:", error);
       toast({
         title: "خطأ",
-        description: "حدث خطأ في إلغاء الاشتراك",
+        description: "حدث خطأ في إلغاء الاشتراك: " + error.message,
         variant: "destructive",
       });
     }
