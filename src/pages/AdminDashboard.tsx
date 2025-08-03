@@ -218,7 +218,7 @@ const AdminDashboard = () => {
         .select("*")
         .order("created_at", { ascending: false });
 
-      console.log("Subscriptions Data:", subscriptionsData, "Error:", subsError);
+      console.log("Subscriptions Data:", subscriptionsData?.map(s => ({id: s.id, status: s.status, plan_name: s.plan_name})), "Error:", subsError);
       
       // Manually get user info for subscriptions
       if (subscriptionsData) {
@@ -549,12 +549,16 @@ const AdminDashboard = () => {
 
       if (fetchError) throw fetchError;
 
+      console.log("Subscription data to cancel:", subscriptionData);
+
       // إلغاء الاشتراك
       const { error } = await supabase
         .from("subscriptions")
         .update({ status: 'cancelled' })
         .eq("id", subscriptionId);
 
+      console.log("Update subscription result - error:", error);
+      
       if (error) throw error;
 
       // خصم الكريدت من المستخدم
