@@ -415,7 +415,14 @@ const Dashboard = () => {
                     <TabsContent key={feature.id} value={feature.id} className="mt-6">
                       {profile && profile.credits >= feature.credits ? (
                         <div className="bg-card/50 backdrop-blur-sm border border-border/50 rounded-2xl p-6">
-                          <feature.component />
+                          <React.Suspense fallback={
+                            <div className="flex items-center justify-center py-8">
+                              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+                              <span className="mr-2">جاري التحميل...</span>
+                            </div>
+                          }>
+                            <feature.component />
+                          </React.Suspense>
                         </div>
                       ) : (
                         <Card className="bg-gradient-to-br from-destructive/5 to-destructive/10 border-destructive/20">
