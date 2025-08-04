@@ -1141,17 +1141,24 @@ const AdminDashboard = () => {
                          <TableCell>
                            {new Date(subscription.created_at).toLocaleDateString('ar-SA')}
                          </TableCell>
-                         <TableCell>
-                           <div className="flex gap-2">
-                             <Button
-                               variant="destructive"
-                               size="sm"
-                               onClick={() => cancelSubscription(subscription.id)}
-                             >
-                               إلغاء
-                             </Button>
-                           </div>
-                         </TableCell>
+                          <TableCell>
+                            <div className="flex gap-2">
+                              {subscription.status === 'active' ? (
+                                <Button
+                                  variant="destructive"
+                                  size="sm"
+                                  onClick={() => cancelSubscription(subscription.id)}
+                                >
+                                  إلغاء
+                                </Button>
+                              ) : (
+                                <span className="text-sm text-muted-foreground">
+                                  {subscription.status === 'cancelled' ? 'ملغي' : 
+                                   subscription.status === 'expired' ? 'منتهي' : subscription.status}
+                                </span>
+                              )}
+                            </div>
+                          </TableCell>
                       </TableRow>
                     ))}
                   </TableBody>
