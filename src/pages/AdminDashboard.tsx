@@ -558,23 +558,12 @@ const AdminDashboard = () => {
       console.log("Subscription data to cancel:", subscriptionData);
 
       // إلغاء الاشتراك
-      console.log("About to update subscription status to cancelled for ID:", subscriptionId);
       const { error } = await supabase
         .from("subscriptions")
         .update({ status: 'cancelled' })
         .eq("id", subscriptionId);
 
       console.log("Update subscription result - error:", error);
-      
-      // تحقق إضافي من نجاح التحديث
-      if (!error) {
-        const { data: updatedSub } = await supabase
-          .from("subscriptions")
-          .select("status")
-          .eq("id", subscriptionId)
-          .single();
-        console.log("Verification - subscription status after update:", updatedSub?.status);
-      }
       
       if (error) throw error;
 
@@ -598,18 +587,15 @@ const AdminDashboard = () => {
 
       console.log("Subscription cancelled successfully");
       
-      // تحديث الحالة المحلية فوراً قبل إعادة جلب البيانات
-      setSubscriptions(prev => prev.map(sub => 
-        sub.id === subscriptionId 
-          ? { ...sub, status: 'cancelled' }
-          : sub
-      ));
-      
+      // إعادة تحديث البيانات فوراً لنشوف التغيير
+      console.log("Calling loadAdminData to refresh data...");
       
       toast({
         title: "تم الإلغاء",
         description: `تم إلغاء الاشتراك وخصم ${subscriptionData.credits_included} كريدت من المستخدم`,
       });
+
+      await loadAdminData();
     } catch (error: any) {
       console.error("Error cancelling subscription:", error);
       toast({
