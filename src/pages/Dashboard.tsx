@@ -1,9 +1,10 @@
-import { useEffect, useState } from 'react';
+import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { SidebarProvider, SidebarTrigger } from '@/components/ui/sidebar';
+import { Skeleton } from '@/components/ui/skeleton';
 import { 
   Brain, 
   MessageSquare, 
@@ -20,73 +21,45 @@ import {
   Menu,
   Crown
 } from 'lucide-react';
-import { supabase } from '@/integrations/supabase/client';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
-import { toast } from 'sonner';
+import { useProfile } from '@/hooks/useProfile';
 import { AppSidebar } from '@/components/AppSidebar';
 import SubscriptionAlerts from '@/components/SubscriptionAlerts';
-import TextQuestion from '@/components/ai/TextQuestion';
-import ImageQuestion from '@/components/ai/ImageQuestion';
-import AudioSummary from '@/components/ai/AudioSummary';
-import MindMap from '@/components/ai/MindMap';
-import ResearchPaper from '@/components/ai/ResearchPaper';
-import TextEditing from '@/components/ai/TextEditing';
+
+// Lazy load AI components for better performance
+const TextQuestion = React.lazy(() => import('@/components/ai/TextQuestion'));
+const ImageQuestion = React.lazy(() => import('@/components/ai/ImageQuestion'));
+const AudioSummary = React.lazy(() => import('@/components/ai/AudioSummary'));
+const MindMap = React.lazy(() => import('@/components/ai/MindMap'));
+const ResearchPaper = React.lazy(() => import('@/components/ai/ResearchPaper'));
+const TextEditing = React.lazy(() => import('@/components/ai/TextEditing'));
 
 const Dashboard = () => {
-  const [profile, setProfile] = useState<any>(null);
-  const [loading, setLoading] = useState(true);
   const { user } = useAuth();
+  const { profile, isLoading, error, refreshCredits } = useProfile();
   const navigate = useNavigate();
 
-  useEffect(() => {
+  React.useEffect(() => {
     if (!user) {
       navigate('/auth');
-      return;
     }
-    fetchProfile();
   }, [user, navigate]);
 
-  const fetchProfile = async () => {
-    if (!user) return;
-    
-    try {
-      const { data: profileData, error: profileError } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('user_id', user.id)
-        .maybeSingle();
-
-      if (profileError) {
-        console.error('خطأ في جلب بيانات الملف الشخصي:', profileError);
-        toast.error('حدث خطأ في تحميل البيانات');
-      } else if (profileData) {
-        setProfile(profileData);
-      } else {
-        // إنشاء ملف شخصي جديد إذا لم يوجد
-        const { data: newProfile, error: createError } = await supabase
-          .from('profiles')
-          .insert({
-            user_id: user.id,
-            email: user.email || '',
-            full_name: user.user_metadata?.full_name || user.email || '',
-            credits: 100 // رصيد ابتدائي
-          })
-          .select()
-          .single();
-          
-        if (createError) {
-          console.error('خطأ في إنشاء الملف الشخصي:', createError);
-        } else {
-          setProfile(newProfile);
-        }
-      }
-    } catch (error) {
-      console.error('خطأ في التحقق من المستخدم:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
+  if (error) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <Card className="w-full max-w-md mx-4">
+          <CardContent className="pt-6 text-center">
+            <p className="text-destructive mb-4">حدث خطأ في تحميل البيانات</p>
+            <Button onClick={() => window.location.reload()}>
+              إعادة المحاولة
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   const aiFeatures = [
     {
@@ -145,18 +118,48 @@ const Dashboard = () => {
     },
   ];
 
-  if (loading) {
+  if (isLoading) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-      </div>
+      <SidebarProvider>
+        <div className="min-h-screen flex w-full bg-gradient-to-br from-background via-background to-muted/20">
+          <div className="w-64 border-r border-border bg-card">
+            <div className="p-4 space-y-4">
+              <Skeleton className="h-12 w-full" />
+              <Skeleton className="h-8 w-3/4" />
+              <Skeleton className="h-8 w-1/2" />
+            </div>
+          </div>
+          <div className="flex-1 flex flex-col">
+            <header className="bg-card/80 backdrop-blur-lg border-b border-border/50 sticky top-0 z-50">
+              <div className="container mx-auto px-4 py-4">
+                <div className="flex items-center justify-between">
+                  <Skeleton className="h-8 w-32" />
+                  <Skeleton className="h-8 w-24" />
+                </div>
+              </div>
+            </header>
+            <main className="flex-1 container mx-auto px-4 py-8">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                {Array.from({ length: 6 }).map((_, i) => (
+                  <Card key={i} className="p-6">
+                    <Skeleton className="h-16 w-16 rounded-2xl mx-auto mb-4" />
+                    <Skeleton className="h-6 w-3/4 mx-auto mb-2" />
+                    <Skeleton className="h-4 w-full mb-4" />
+                    <Skeleton className="h-8 w-20 mx-auto" />
+                  </Card>
+                ))}
+              </div>
+            </main>
+          </div>
+        </div>
+      </SidebarProvider>
     );
   }
 
   return (
     <SidebarProvider>
       <div className="min-h-screen flex w-full bg-gradient-to-br from-background via-background to-muted/20">
-        <AppSidebar profile={profile} onRefreshCredits={fetchProfile} />
+        <AppSidebar profile={profile} onRefreshCredits={refreshCredits} />
         
         <div className="flex-1 flex flex-col">
           {/* الشريط العلوي المحسن */}
@@ -374,7 +377,7 @@ const Dashboard = () => {
                 </div>
               </TabsContent>
               
-              <TabsContent value="workspace" className="space-y-8">
+                <TabsContent value="workspace" className="space-y-8">
                 <div className="text-center mb-8">
                   <h3 className="text-2xl font-bold mb-2">مساحة العمل</h3>
                   <p className="text-muted-foreground">اختر الأداة التي تريد استخدامها</p>
