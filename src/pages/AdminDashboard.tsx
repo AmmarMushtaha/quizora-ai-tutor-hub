@@ -587,15 +587,18 @@ const AdminDashboard = () => {
 
       console.log("Subscription cancelled successfully");
       
-      // إعادة تحديث البيانات فوراً لنشوف التغيير
-      console.log("Calling loadAdminData to refresh data...");
+      // تحديث الحالة المحلية فوراً قبل إعادة جلب البيانات
+      setSubscriptions(prev => prev.map(sub => 
+        sub.id === subscriptionId 
+          ? { ...sub, status: 'cancelled' }
+          : sub
+      ));
+      
       
       toast({
         title: "تم الإلغاء",
         description: `تم إلغاء الاشتراك وخصم ${subscriptionData.credits_included} كريدت من المستخدم`,
       });
-
-      await loadAdminData();
     } catch (error: any) {
       console.error("Error cancelling subscription:", error);
       toast({
