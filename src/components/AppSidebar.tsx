@@ -76,7 +76,8 @@ export function AppSidebar({ profile, onRefreshCredits }: AppSidebarProps) {
 
   return (
     <Sidebar
-      className={`${collapsed ? "w-14 md:w-16" : "w-60 md:w-64"} transition-all duration-300 bg-sidebar border-r border-sidebar-border`}
+      side="left"
+      className={`${collapsed ? "w-14 md:w-16" : "w-60 md:w-64"} transition-all duration-300 bg-sidebar border-l border-sidebar-border`}
     >
       <SidebarContent className="p-3 md:p-4">
         {/* شعار التطبيق */}
