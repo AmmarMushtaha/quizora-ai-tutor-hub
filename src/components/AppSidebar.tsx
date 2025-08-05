@@ -54,12 +54,12 @@ export function AppSidebar({ profile, onRefreshCredits }: AppSidebarProps) {
   
   const getNavCls = ({ isActive }: { isActive: boolean }) =>
     isActive 
-      ? "bg-primary/10 text-primary font-medium border-r-2 border-primary" 
-      : "hover:bg-muted/50 text-muted-foreground hover:text-foreground";
+      ? "bg-sidebar-accent text-sidebar-primary font-medium border-r-2 border-sidebar-primary" 
+      : "hover:bg-sidebar-accent/50 text-sidebar-foreground/70 hover:text-sidebar-foreground";
 
   // تحديد إذا كان المستخدم مشترك
-  const isSubscriber = profile?.credits > 100; // يمكن تعديل هذا الشرط حسب منطق الاشتراك
-  const hasActiveSubscription = profile?.subscription_status === 'active'; // مثال آخر
+  const isSubscriber = profile?.credits > 100;
+  const hasActiveSubscription = profile?.subscription_status === 'active';
 
   const handleSignOut = async () => {
     await supabase.auth.signOut();
@@ -67,61 +67,61 @@ export function AppSidebar({ profile, onRefreshCredits }: AppSidebarProps) {
 
   const getCreditsStatus = () => {
     if (!profile?.credits) return { color: "text-destructive", bg: "bg-destructive/10", status: "منتهي" };
-    if (profile.credits < 20) return { color: "text-orange-500", bg: "bg-orange-500/10", status: "منخفض" };
-    if (profile.credits < 100) return { color: "text-yellow-500", bg: "bg-yellow-500/10", status: "محدود" };
-    return { color: "text-green-500", bg: "bg-green-500/10", status: "جيد" };
+    if (profile.credits < 20) return { color: "text-amber-600", bg: "bg-amber-50 dark:bg-amber-950", status: "منخفض" };
+    if (profile.credits < 100) return { color: "text-orange-600", bg: "bg-orange-50 dark:bg-orange-950", status: "محدود" };
+    return { color: "text-emerald-600", bg: "bg-emerald-50 dark:bg-emerald-950", status: "جيد" };
   };
 
   const creditsStatus = getCreditsStatus();
 
   return (
     <Sidebar
-      className={`${collapsed ? "w-14" : "w-60"} transition-all duration-300 border-r bg-card/50 backdrop-blur-sm`}
+      className={`${collapsed ? "w-14 md:w-16" : "w-60 md:w-64"} transition-all duration-300 bg-sidebar border-r border-sidebar-border`}
     >
-      <SidebarContent className="p-4">
+      <SidebarContent className="p-3 md:p-4">
         {/* شعار التطبيق */}
-        <div className={`flex items-center gap-3 mb-8 ${collapsed ? 'justify-center' : ''}`}>
+        <div className={`flex items-center gap-3 mb-6 md:mb-8 ${collapsed ? 'justify-center' : ''}`}>
           <div className="relative">
-            <Brain className="w-8 h-8 text-primary animate-pulse" />
-            <div className="absolute inset-0 w-8 h-8 bg-primary/20 rounded-full animate-ping"></div>
+            <Brain className="w-7 h-7 md:w-8 md:h-8 text-sidebar-primary animate-pulse" />
+            <div className="absolute inset-0 w-7 h-7 md:w-8 md:h-8 bg-sidebar-primary/20 rounded-full animate-ping"></div>
           </div>
           {!collapsed && (
             <div>
-              <h1 className="text-xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
+              <h1 className="text-lg md:text-xl font-bold bg-gradient-to-r from-sidebar-primary to-primary bg-clip-text text-transparent">
                 كويزورا
               </h1>
-              <p className="text-xs text-muted-foreground">منصة الذكاء الاصطناعي</p>
+              <p className="text-xs text-sidebar-foreground/70">منصة الذكاء الاصطناعي</p>
             </div>
           )}
         </div>
 
         {/* معلومات المستخدم المحسنة */}
         {!collapsed && profile && (
-          <div className={`mb-6 p-4 rounded-xl border transition-all duration-300 ${
+          <div className={`mb-4 md:mb-6 p-3 md:p-4 rounded-lg md:rounded-xl border transition-all duration-300 ${
             isSubscriber 
-              ? 'bg-gradient-to-br from-primary/5 via-accent/5 to-primary/5 border-primary/20 shadow-lg shadow-primary/10' 
-              : 'bg-muted/50 border-border/50'
+              ? 'bg-gradient-to-br from-sidebar-primary/5 via-primary/5 to-sidebar-primary/5 border-sidebar-primary/20 shadow-md' 
+              : 'bg-sidebar-accent/50 border-sidebar-border'
           }`}>
-            <div className="flex items-center gap-3 mb-3">
-              <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
+            <div className="flex items-center gap-2 md:gap-3 mb-2 md:mb-3">
+              <div className={`w-8 h-8 md:w-10 md:h-10 rounded-full flex items-center justify-center ${
                 isSubscriber 
-                  ? 'bg-gradient-to-br from-primary to-accent' 
-                  : 'bg-muted'
+                  ? 'bg-gradient-to-br from-sidebar-primary to-primary' 
+                  : 'bg-sidebar-accent'
               }`}>
                 {isSubscriber ? (
-                  <Crown className="w-5 h-5 text-white" />
+                  <Crown className="w-4 h-4 md:w-5 md:h-5 text-white" />
                 ) : (
-                  <User className="w-5 h-5 text-muted-foreground" />
+                  <User className="w-4 h-4 md:w-5 md:h-5 text-sidebar-foreground/70" />
                 )}
               </div>
               <div className="flex-1 min-w-0">
-                <p className={`font-medium truncate ${
-                  isSubscriber ? 'text-primary' : 'text-foreground'
+                <p className={`text-sm md:text-base font-medium truncate ${
+                  isSubscriber ? 'text-sidebar-primary' : 'text-sidebar-foreground'
                 }`}>
                   {profile.full_name || 'المستخدم'}
                 </p>
                 {isSubscriber && (
-                  <Badge className="bg-gradient-to-r from-primary to-accent text-white text-xs">
+                  <Badge className="bg-gradient-to-r from-sidebar-primary to-primary text-white text-xs mt-1">
                     <Crown className="w-3 h-3 mr-1" />
                     مشترك مميز
                   </Badge>
@@ -130,27 +130,27 @@ export function AppSidebar({ profile, onRefreshCredits }: AppSidebarProps) {
             </div>
             
             {/* عرض الكريدت المحسن */}
-            <div className={`p-3 rounded-lg ${creditsStatus.bg} border border-current/20`}>
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-sm font-medium">الرصيد الحالي</span>
+            <div className={`p-2 md:p-3 rounded-lg ${creditsStatus.bg} border border-current/20`}>
+              <div className="flex items-center justify-between mb-1 md:mb-2">
+                <span className="text-xs md:text-sm font-medium text-sidebar-foreground">الرصيد الحالي</span>
                 <Badge variant="outline" className={`${creditsStatus.color} border-current/30 text-xs`}>
                   {creditsStatus.status}
                 </Badge>
               </div>
-              <div className="flex items-center gap-2">
-                <CreditCard className={`w-4 h-4 ${creditsStatus.color}`} />
-                <span className={`font-bold text-lg ${creditsStatus.color}`}>
+              <div className="flex items-center gap-1 md:gap-2">
+                <CreditCard className={`w-3 h-3 md:w-4 md:h-4 ${creditsStatus.color}`} />
+                <span className={`font-bold text-base md:text-lg ${creditsStatus.color}`}>
                   {profile.credits || 0}
                 </span>
-                <span className="text-sm text-muted-foreground">نقطة</span>
+                <span className="text-xs md:text-sm text-sidebar-foreground/70">نقطة</span>
               </div>
               
               {/* شريط التقدم */}
-              <div className="mt-2 w-full bg-muted rounded-full h-2">
+              <div className="mt-1 md:mt-2 w-full bg-sidebar-accent rounded-full h-1.5 md:h-2">
                 <div 
-                  className={`h-2 rounded-full transition-all duration-500 ${
+                  className={`h-1.5 md:h-2 rounded-full transition-all duration-500 ${
                     isSubscriber 
-                      ? 'bg-gradient-to-r from-primary to-accent' 
+                      ? 'bg-gradient-to-r from-sidebar-primary to-primary' 
                       : 'bg-current'
                   }`}
                   style={{ 
@@ -161,9 +161,10 @@ export function AppSidebar({ profile, onRefreshCredits }: AppSidebarProps) {
               
               {/* تنبيهات الرصيد */}
               {profile.credits < 20 && (
-                <div className="mt-2 flex items-center gap-1 text-xs text-orange-600 dark:text-orange-400">
+                <div className="mt-1 md:mt-2 flex items-center gap-1 text-xs text-amber-600 dark:text-amber-400">
                   <Zap className="w-3 h-3" />
-                  <span>رصيد منخفض - قم بإعادة الشحن</span>
+                  <span className="hidden sm:inline">رصيد منخفض - قم بإعادة الشحن</span>
+                  <span className="sm:hidden">رصيد منخفض</span>
                 </div>
               )}
             </div>
@@ -172,7 +173,7 @@ export function AppSidebar({ profile, onRefreshCredits }: AppSidebarProps) {
 
         {/* القائمة الرئيسية */}
         <SidebarGroup>
-          <SidebarGroupLabel className="text-sm font-medium text-muted-foreground mb-2">
+          <SidebarGroupLabel className="text-xs md:text-sm font-medium text-sidebar-foreground/70 mb-2">
             {!collapsed && "القائمة الرئيسية"}
           </SidebarGroupLabel>
           <SidebarGroupContent>
@@ -184,12 +185,12 @@ export function AppSidebar({ profile, onRefreshCredits }: AppSidebarProps) {
                       to={item.url} 
                       end 
                       className={({ isActive }) => `
-                        flex items-center gap-3 px-3 py-2 rounded-lg transition-all duration-200
+                        flex items-center gap-2 md:gap-3 px-2 md:px-3 py-2 md:py-2.5 rounded-lg transition-all duration-200 text-sm md:text-base
                         ${getNavCls({ isActive })}
                         ${collapsed ? 'justify-center' : ''}
                       `}
                     >
-                      <item.icon className="w-5 h-5 flex-shrink-0" />
+                      <item.icon className="w-4 h-4 md:w-5 md:h-5 flex-shrink-0" />
                       {!collapsed && <span className="font-medium">{item.title}</span>}
                     </NavLink>
                   </SidebarMenuButton>
@@ -201,32 +202,32 @@ export function AppSidebar({ profile, onRefreshCredits }: AppSidebarProps) {
 
         {/* أزرار سريعة */}
         {!collapsed && (
-          <div className="mt-6 space-y-2">
+          <div className="mt-4 md:mt-6 space-y-2">
             <Button 
               variant="outline" 
               size="sm" 
-              className="w-full justify-start gap-2 hover:bg-primary/10 hover:text-primary hover:border-primary/30"
+              className="w-full justify-start gap-2 text-xs md:text-sm hover:bg-sidebar-primary/10 hover:text-sidebar-primary hover:border-sidebar-primary/30"
               onClick={onRefreshCredits}
             >
-              <Gift className="w-4 h-4" />
+              <Gift className="w-3 h-3 md:w-4 md:h-4" />
               تحديث الرصيد
             </Button>
           </div>
         )}
 
         {/* زر تسجيل الخروج */}
-        <div className={`mt-auto pt-4 ${collapsed ? 'flex justify-center' : ''}`}>
+        <div className={`mt-auto pt-3 md:pt-4 ${collapsed ? 'flex justify-center' : ''}`}>
           <Button
             variant="ghost"
             size={collapsed ? "icon" : "sm"}
             className={`${
               collapsed 
-                ? 'w-10 h-10' 
-                : 'w-full justify-start gap-2'
+                ? 'w-8 h-8 md:w-10 md:h-10' 
+                : 'w-full justify-start gap-2 text-xs md:text-sm'
             } text-destructive hover:bg-destructive/10 hover:text-destructive`}
             onClick={handleSignOut}
           >
-            <LogOut className="w-4 h-4" />
+            <LogOut className="w-3 h-3 md:w-4 md:h-4" />
             {!collapsed && <span>تسجيل الخروج</span>}
           </Button>
         </div>

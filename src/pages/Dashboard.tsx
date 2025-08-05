@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { SidebarProvider, SidebarTrigger } from '@/components/ui/sidebar';
+import { SidebarTrigger } from '@/components/ui/sidebar';
 import { Skeleton } from '@/components/ui/skeleton';
 import { 
   Brain, 
@@ -120,137 +120,135 @@ const Dashboard = () => {
 
   if (isLoading) {
     return (
-      <SidebarProvider>
-        <div className="min-h-screen flex w-full bg-gradient-to-br from-background via-background to-muted/20">
-          <div className="w-64 border-r border-border bg-card">
-            <div className="p-4 space-y-4">
-              <Skeleton className="h-12 w-full" />
-              <Skeleton className="h-8 w-3/4" />
-              <Skeleton className="h-8 w-1/2" />
-            </div>
-          </div>
-          <div className="flex-1 flex flex-col">
-            <header className="bg-card/80 backdrop-blur-lg border-b border-border/50 sticky top-0 z-50">
-              <div className="container mx-auto px-4 py-4">
-                <div className="flex items-center justify-between">
-                  <Skeleton className="h-8 w-32" />
-                  <Skeleton className="h-8 w-24" />
-                </div>
-              </div>
-            </header>
-            <main className="flex-1 container mx-auto px-4 py-8">
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-                {Array.from({ length: 6 }).map((_, i) => (
-                  <Card key={i} className="p-6">
-                    <Skeleton className="h-16 w-16 rounded-2xl mx-auto mb-4" />
-                    <Skeleton className="h-6 w-3/4 mx-auto mb-2" />
-                    <Skeleton className="h-4 w-full mb-4" />
-                    <Skeleton className="h-8 w-20 mx-auto" />
-                  </Card>
-                ))}
-              </div>
-            </main>
+      <div className="min-h-screen flex w-full bg-gradient-to-br from-background via-background to-muted/20">
+        <div className="w-60 md:w-64 border-r border-border bg-card">
+          <div className="p-4 space-y-4">
+            <Skeleton className="h-12 w-full" />
+            <Skeleton className="h-8 w-3/4" />
+            <Skeleton className="h-8 w-1/2" />
           </div>
         </div>
-      </SidebarProvider>
+        <div className="flex-1 flex flex-col">
+          <header className="bg-card/80 backdrop-blur-lg border-b border-border/50 sticky top-0 z-50">
+            <div className="container mx-auto px-4 py-4">
+              <div className="flex items-center justify-between">
+                <Skeleton className="h-8 w-32" />
+                <Skeleton className="h-8 w-24" />
+              </div>
+            </div>
+          </header>
+          <main className="flex-1 container mx-auto px-2 md:px-4 py-4 md:py-8">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-8">
+              {Array.from({ length: 6 }).map((_, i) => (
+                <Card key={i} className="p-4 md:p-6">
+                  <Skeleton className="h-12 w-12 md:h-16 md:w-16 rounded-2xl mx-auto mb-4" />
+                  <Skeleton className="h-4 md:h-6 w-3/4 mx-auto mb-2" />
+                  <Skeleton className="h-3 md:h-4 w-full mb-4" />
+                  <Skeleton className="h-6 md:h-8 w-16 md:w-20 mx-auto" />
+                </Card>
+              ))}
+            </div>
+          </main>
+        </div>
+      </div>
     );
   }
 
   return (
-    <SidebarProvider>
-      <div className="min-h-screen flex w-full bg-gradient-to-br from-background via-background to-muted/20">
-        <AppSidebar profile={profile} onRefreshCredits={refreshCredits} />
-        
-        <div className="flex-1 flex flex-col">
-          {/* الشريط العلوي المحسن */}
-          <header className="bg-card/80 backdrop-blur-lg border-b border-border/50 sticky top-0 z-50">
-            <div className="container mx-auto px-4 py-4">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-4">
-                  <SidebarTrigger className="hover:bg-primary/10 hover:text-primary transition-all duration-300" />
-                  <div className="flex items-center gap-3">
-                    <div className="relative lg:hidden">
-                      <Brain className="w-8 h-8 text-primary animate-pulse" />
-                      <div className="absolute inset-0 w-8 h-8 bg-primary/20 rounded-full animate-ping"></div>
-                    </div>
-                    <div className="hidden lg:block">
-                      <h1 className="text-2xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
-                        كويزورا
-                      </h1>
-                      <p className="text-xs text-muted-foreground">منصة الذكاء الاصطناعي التعليمية</p>
-                    </div>
+    <div className="min-h-screen flex w-full bg-gradient-to-br from-background via-background to-muted/20">
+      <AppSidebar profile={profile} onRefreshCredits={refreshCredits} />
+      
+      <div className="flex-1 flex flex-col">
+        {/* الشريط العلوي المحسن */}
+        <header className="bg-card/80 backdrop-blur-lg border-b border-border/50 sticky top-0 z-50">
+          <div className="container mx-auto px-2 md:px-4 py-3 md:py-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2 md:gap-4">
+                <SidebarTrigger className="hover:bg-primary/10 hover:text-primary transition-all duration-300" />
+                <div className="flex items-center gap-2 md:gap-3">
+                  <div className="relative lg:hidden">
+                    <Brain className="w-6 h-6 md:w-8 md:h-8 text-primary animate-pulse" />
+                    <div className="absolute inset-0 w-6 h-6 md:w-8 md:h-8 bg-primary/20 rounded-full animate-ping"></div>
                   </div>
+                  <div className="hidden lg:block">
+                    <h1 className="text-xl md:text-2xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
+                      كويزورا
+                    </h1>
+                    <p className="text-xs text-muted-foreground">منصة الذكاء الاصطناعي التعليمية</p>
+                  </div>
+                </div>
+              </div>
+                
+              <div className="flex items-center gap-2 md:gap-4">
+                {/* عرض الرصيد المحسن للمستخدمين المشتركين */}
+                <div className="relative">
+                  <Badge 
+                    variant="secondary" 
+                    className={`text-sm md:text-lg px-3 md:px-6 py-2 md:py-3 transition-all duration-300 ${
+                      profile?.credits > 100
+                        ? 'bg-gradient-to-r from-primary/10 to-accent/10 border-primary/20 hover:from-primary/20 hover:to-accent/20 ring-2 ring-primary/20'
+                        : 'bg-muted/50 border-border/50 hover:bg-muted/70'
+                    }`}
+                  >
+                    <CreditCard className={`w-4 h-4 md:w-5 md:h-5 ml-1 md:ml-2 ${
+                      profile?.credits > 100 ? 'text-primary' : 'text-muted-foreground'
+                    }`} />
+                    <span className="font-bold">{profile?.credits || 0}</span>
+                    <span className="mr-1 hidden sm:inline">نقطة</span>
+                  </Badge>
+                  {profile && profile.credits < 10 && (
+                    <div className="absolute -top-1 -right-1 md:-top-2 md:-right-2 w-2 h-2 md:w-3 md:h-3 bg-red-500 rounded-full animate-pulse"></div>
+                  )}
                 </div>
                 
-                <div className="flex items-center gap-4">
-                  {/* عرض الرصيد المحسن للمستخدمين المشتركين */}
-                  <div className="relative">
-                    <Badge 
-                      variant="secondary" 
-                      className={`text-lg px-6 py-3 transition-all duration-300 ${
-                        profile?.credits > 100
-                          ? 'bg-gradient-to-r from-primary/10 to-accent/10 border-primary/20 hover:from-primary/20 hover:to-accent/20 ring-2 ring-primary/20'
-                          : 'bg-muted/50 border-border/50 hover:bg-muted/70'
-                      }`}
-                    >
-                      <CreditCard className={`w-5 h-5 ml-2 ${
-                        profile?.credits > 100 ? 'text-primary' : 'text-muted-foreground'
-                      }`} />
-                      <span className="font-bold">{profile?.credits || 0}</span>
-                      <span className="mr-1">نقطة</span>
-                    </Badge>
-                    {profile && profile.credits < 10 && (
-                      <div className="absolute -top-2 -right-2 w-3 h-3 bg-red-500 rounded-full animate-pulse"></div>
-                    )}
-                  </div>
+                <div className="hidden md:flex gap-2">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="hover:bg-primary/10 hover:text-primary transition-all duration-300"
+                    onClick={() => navigate('/profile')}
+                  >
+                    <User className="w-4 h-4 md:w-5 md:h-5" />
+                  </Button>
                   
-                  <div className="hidden md:flex gap-2">
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="hover:bg-primary/10 hover:text-primary transition-all duration-300"
-                      onClick={() => navigate('/profile')}
-                    >
-                      <User className="w-5 h-5" />
-                    </Button>
-                    
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="hover:bg-accent/10 hover:text-accent transition-all duration-300"
-                      onClick={() => navigate('/history')}
-                    >
-                      <History className="w-5 h-5" />
-                    </Button>
-                  </div>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="hover:bg-accent/10 hover:text-accent transition-all duration-300"
+                    onClick={() => navigate('/history')}
+                  >
+                    <History className="w-4 h-4 md:w-5 md:h-5" />
+                  </Button>
                 </div>
+              </div>
               </div>
             </div>
           </header>
 
-          {/* المحتوى الرئيسي المحسن */}
-          <main className="flex-1 container mx-auto px-4 py-8 overflow-auto">
+        {/* المحتوى الرئيسي المحسن */}
+        <main className="flex-1 container mx-auto px-2 md:px-4 py-4 md:py-8 overflow-auto">
             {/* تنبيهات الاشتراك الذكية */}
             <SubscriptionAlerts profile={profile} />
             
-            <div className="mb-12 text-center">
+            <div className="mb-8 md:mb-12 text-center">
               <div className="relative inline-block">
-                <h2 className={`text-3xl md:text-4xl font-bold mb-4 ${
+                <h2 className={`text-2xl md:text-3xl lg:text-4xl font-bold mb-4 ${
                   profile?.credits > 100
                     ? 'bg-gradient-to-r from-primary via-accent to-primary bg-clip-text text-transparent'
                     : 'text-foreground'
                 }`}>
                   مرحباً، {profile?.full_name || 'المستخدم'}
                   {profile?.credits > 100 && (
-                    <Badge className="ml-3 bg-gradient-to-r from-primary to-accent text-white">
-                      <Crown className="w-4 h-4 mr-1" />
-                      مشترك مميز
+                    <Badge className="ml-2 md:ml-3 bg-gradient-to-r from-primary to-accent text-white text-xs md:text-sm">
+                      <Crown className="w-3 h-3 md:w-4 md:h-4 mr-1" />
+                      <span className="hidden sm:inline">مشترك مميز</span>
+                      <span className="sm:hidden">مميز</span>
                     </Badge>
                   )}
                 </h2>
-                <div className="absolute -bottom-2 left-1/2 transform -translate-x-1/2 w-24 h-1 bg-gradient-to-r from-primary to-accent rounded-full"></div>
+                <div className="absolute -bottom-2 left-1/2 transform -translate-x-1/2 w-16 md:w-24 h-1 bg-gradient-to-r from-primary to-accent rounded-full"></div>
               </div>
-              <p className="text-muted-foreground text-lg mt-6 max-w-2xl mx-auto">
+              <p className="text-muted-foreground text-sm md:text-lg mt-4 md:mt-6 max-w-2xl mx-auto px-4">
                 استخدم أدوات الذكاء الاصطناعي المتقدمة لتحسين تعلمك وإنتاجيتك
               </p>
             </div>
@@ -261,9 +259,9 @@ const Dashboard = () => {
                 <TabsTrigger value="workspace">مساحة العمل</TabsTrigger>
               </TabsList>
               
-              <TabsContent value="tools" className="space-y-6">
+              <TabsContent value="tools" className="space-y-4 md:space-y-6">
                 {/* شبكة الأدوات المحسنة */}
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6 lg:gap-8">
                   {aiFeatures.map((feature, index) => (
                     <Card 
                       key={feature.title} 
@@ -318,9 +316,9 @@ const Dashboard = () => {
                 </div>
 
                 {/* إحصائيات سريعة محسنة */}
-                <div className="mt-12">
-                  <h3 className="text-2xl font-bold text-center mb-8">إحصائياتك</h3>
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+                <div className="mt-8 md:mt-12">
+                  <h3 className="text-xl md:text-2xl font-bold text-center mb-6 md:mb-8">إحصائياتك</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6 lg:gap-8">
                     <Card className={`group relative overflow-hidden transition-all duration-300 hover:shadow-lg ${
                       profile?.credits > 100
                         ? 'bg-gradient-to-br from-primary/5 to-primary/10 border-primary/20 hover:border-primary/40 hover:shadow-primary/20'
@@ -377,15 +375,15 @@ const Dashboard = () => {
                 </div>
               </TabsContent>
               
-                <TabsContent value="workspace" className="space-y-8">
-                <div className="text-center mb-8">
-                  <h3 className="text-2xl font-bold mb-2">مساحة العمل</h3>
-                  <p className="text-muted-foreground">اختر الأداة التي تريد استخدامها</p>
+                <TabsContent value="workspace" className="space-y-6 md:space-y-8">
+                <div className="text-center mb-6 md:mb-8">
+                  <h3 className="text-xl md:text-2xl font-bold mb-2">مساحة العمل</h3>
+                  <p className="text-sm md:text-base text-muted-foreground">اختر الأداة التي تريد استخدامها</p>
                 </div>
                 
                 <Tabs defaultValue="text-question" className="w-full">
-                  <div className="mb-6">
-                    <TabsList className="grid w-full grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-2 h-auto bg-muted/30 p-2">
+                  <div className="mb-4 md:mb-6">
+                    <TabsList className="grid w-full grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-1 md:gap-2 h-auto bg-muted/30 p-1 md:p-2">
                       {aiFeatures.map((feature) => (
                         <TabsTrigger 
                           key={feature.id} 
@@ -460,9 +458,8 @@ const Dashboard = () => {
               </TabsContent>
             </Tabs>
           </main>
-        </div>
       </div>
-    </SidebarProvider>
+    </div>
   );
 };
 
