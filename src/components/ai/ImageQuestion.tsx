@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Image, Upload, Send, Loader2, X } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
+import AIResponse from './AIResponse';
 
 const ImageQuestion = () => {
   const [question, setQuestion] = useState('');
@@ -186,15 +187,13 @@ const ImageQuestion = () => {
           )}
         </Button>
 
-        {answer && (
-          <div className="mt-6 p-4 bg-secondary/50 rounded-lg border">
-            <h3 className="font-semibold mb-2 text-primary">التحليل:</h3>
-            <p className="leading-relaxed whitespace-pre-wrap">{answer}</p>
-            <div className="mt-2 text-xs text-muted-foreground">
-              مدعوم بـ Gemini 2.0 Flash Vision
-            </div>
-          </div>
-        )}
+        <AIResponse
+          response={answer}
+          model="Gemini 2.0 Flash Vision"
+          type="image"
+          isLoading={loading}
+          originalQuery={question}
+        />
       </CardContent>
     </Card>
   );

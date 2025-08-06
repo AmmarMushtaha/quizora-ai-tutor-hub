@@ -3,16 +3,17 @@ import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Edit, Send, Loader2, Copy, Check } from 'lucide-react';
+import { Edit, Send, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
+import AIResponse from './AIResponse';
 
 const TextEditing = () => {
   const [originalText, setOriginalText] = useState('');
   const [editedText, setEditedText] = useState('');
   const [editType, setEditType] = useState('');
   const [loading, setLoading] = useState(false);
-  const [copied, setCopied] = useState(false);
+  
 
   const editTypes = [
     { value: 'grammar', label: 'تصحيح القواعد والإملاء' },
@@ -105,18 +106,6 @@ const TextEditing = () => {
     }
   };
 
-  const copyToClipboard = async () => {
-    if (!editedText) return;
-    
-    try {
-      await navigator.clipboard.writeText(editedText);
-      setCopied(true);
-      toast.success('تم نسخ النص');
-      setTimeout(() => setCopied(false), 2000);
-    } catch (error) {
-      toast.error('فشل في نسخ النص');
-    }
-  };
 
   return (
     <Card className="card-glow">
@@ -166,30 +155,13 @@ const TextEditing = () => {
           )}
         </Button>
 
-        {editedText && (
-          <div className="mt-6 space-y-4">
-            <div className="flex justify-between items-center">
-              <h3 className="font-semibold text-primary">النص المُحرر:</h3>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={copyToClipboard}
-              >
-                {copied ? (
-                  <Check className="w-4 h-4 ml-2 text-green-500" />
-                ) : (
-                  <Copy className="w-4 h-4 ml-2" />
-                )}
-                {copied ? 'تم النسخ' : 'نسخ'}
-              </Button>
-            </div>
-            <div className="p-4 bg-secondary/50 rounded-lg border max-h-96 overflow-y-auto">
-              <div className="whitespace-pre-line leading-relaxed">
-                {editedText}
-              </div>
-            </div>
-          </div>
-        )}
+        <AIResponse
+          response={editedText}
+          model="Gemini 2.0 Flash"
+          type="editing"
+          isLoading={loading}
+          originalQuery={originalText}
+        />
       </CardContent>
     </Card>
   );

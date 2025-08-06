@@ -3,9 +3,10 @@ import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { FileText, Send, Loader2, Download, BookOpen } from 'lucide-react';
+import { BookOpen, Send, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
+import AIResponse from './AIResponse';
 
 const ResearchPaper = () => {
   const [title, setTitle] = useState('');
@@ -22,139 +23,90 @@ const ResearchPaper = () => {
 
     setLoading(true);
     try {
-      // Simulate AI processing
-      await new Promise(resolve => setTimeout(resolve, 5000));
-      const mockPaper = `# ${title}
-
-## المقدمة
-
-هذا البحث يتناول موضوع "${topic}" بشكل شامل ومفصل. يهدف هذا البحث إلى تقديم نظرة عميقة وتحليل دقيق للموضوع المطروح.
-
-## أهداف البحث
-
-1. **الهدف الأول**: تحليل الجوانب الأساسية للموضوع
-2. **الهدف الثاني**: استكشاف التطبيقات العملية
-3. **الهدف الثالث**: تقديم حلول وتوصيات
-
-## المنهجية
-
-تم اتباع منهجية علمية دقيقة في إعداد هذا البحث، والتي تشمل:
-
-- **مراجعة الأدبيات**: دراسة شاملة للمراجع والمصادر ذات الصلة
-- **التحليل النظري**: تطبيق الأطر النظرية المناسبة
-- **الدراسة التطبيقية**: تحليل الحالات العملية والأمثلة الواقعية
-
-## الإطار النظري
-
-### المفاهيم الأساسية
-
-يستند هذا البحث على مجموعة من المفاهيم الأساسية التي تشكل الأساس النظري للدراسة:
-
-1. **المفهوم الأول**: تعريف شامل ووضع الأسس
-2. **المفهوم الثاني**: التطبيقات والاستخدامات
-3. **المفهوم الثالث**: التحديات والفرص
-
-### النماذج والنظريات
-
-تم الاعتماد على عدة نماذج ونظريات معترف بها علمياً:
-
-- **النموذج الأول**: يوضح العلاقات الأساسية
-- **النموذج الثاني**: يحلل العوامل المؤثرة
-- **النظرية الثالثة**: تقدم إطار عمل شامل
-
-## التحليل والمناقشة
-
-### النتائج الرئيسية
-
-من خلال التحليل المعمق، تم التوصل إلى النتائج التالية:
-
-1. **النتيجة الأولى**: تحديد العوامل الرئيسية المؤثرة
-2. **النتيجة الثانية**: اكتشاف أنماط وعلاقات جديدة
-3. **النتيجة الثالثة**: تطوير نموذج تفسيري شامل
-
-### التحديات والعقبات
-
-واجه البحث عدة تحديات تم التعامل معها بطرق علمية:
-
-- **التحدي الأول**: نقص في البيانات - تم حله بجمع بيانات إضافية
-- **التحدي الثاني**: تعقيد الموضوع - تم تبسيطه بالتحليل المرحلي
-- **التحدي الثالث**: تداخل المتغيرات - تم فصلها وتحليلها منفردة
-
-## التوصيات والاقتراحات
-
-بناءً على نتائج البحث، يُوصى بما يلي:
-
-### التوصيات قصيرة المدى
-
-1. **تطبيق النتائج**: البدء في تنفيذ الحلول المقترحة
-2. **المتابعة المستمرة**: وضع آليات مراقبة وتقييم
-3. **التطوير التدريجي**: تحسين الأداء بشكل مستمر
-
-### التوصيات طويلة المدى
-
-1. **البحث المستقبلي**: إجراء دراسات متخصصة إضافية
-2. **التطوير الاستراتيجي**: وضع خطط طويلة المدى
-3. **الشراكات**: تطوير تعاونات مع جهات ذات صلة
-
-## الخلاصة
-
-يُظهر هذا البحث أهمية "${topic}" وتأثيره الكبير في المجال. النتائج المتوصل إليها تفتح آفاقاً جديدة للبحث والتطبيق.
-
-## المراجع والمصادر
-
-1. مرجع أكاديمي متخصص في الموضوع
-2. دراسة ميدانية حديثة ذات صلة
-3. مقال علمي محكم من مجلة معترف بها
-4. كتاب أكاديمي شامل في المجال
-5. تقرير بحثي من مؤسسة علمية معتمدة
-
----
-
-**تاريخ الإعداد**: ${new Date().toLocaleDateString('ar-SA')}
-**عدد الكلمات**: حوالي 800 كلمة
-**عدد الصفحات**: 3-4 صفحات
-
-${requirements ? `\n**متطلبات إضافية تم مراعاتها**: ${requirements}` : ''}`;
-      
-      setPaper(mockPaper);
-      
-      // Calculate word count
-      const wordCount = mockPaper.split(/\s+/).length;
-      
-      // Deduct credits
+      // الحصول على المستخدم الحالي
       const { data: { user } } = await supabase.auth.getUser();
-      if (user) {
-        await supabase.rpc('deduct_credits', {
+      if (!user) {
+        toast.error('يجب تسجيل الدخول أولاً');
+        return;
+      }
+
+      // خصم النقاط أولاً
+      const { data: deductResult, error: deductError } = await supabase
+        .rpc('deduct_credits', {
           p_user_id: user.id,
           p_credits_to_deduct: 50,
           p_request_type: 'research_paper',
           p_content: `${title} - ${topic} - ${requirements}`,
-          p_response: mockPaper,
+          p_word_count: `${title} ${topic} ${requirements}`.split(' ').length
+        });
+
+      if (deductError || !deductResult) {
+        toast.error('رصيدك غير كافي أو حدث خطأ في خصم النقاط');
+        return;
+      }
+
+      // إنشاء البحث بالذكاء الاصطناعي
+      const researchPrompt = `اكتب بحثاً أكاديمياً متكاملاً باللغة العربية بالمواصفات التالية:
+
+العنوان: ${title}
+الموضوع: ${topic}
+${requirements ? `متطلبات إضافية: ${requirements}` : ''}
+
+يجب أن يحتوي البحث على:
+- مقدمة شاملة
+- أهداف واضحة
+- منهجية البحث
+- إطار نظري متكامل
+- تحليل ومناقشة
+- نتائج وتوصيات
+- خلاصة
+- قائمة مراجع
+
+يجب أن يكون البحث أكاديمياً ومتقناً ومنسقاً بشكل احترافي.`;
+
+      // استدعاء Gemini API
+      const { data: aiResponse, error: aiError } = await supabase.functions.invoke('gemini-text', {
+        body: { 
+          prompt: researchPrompt,
+          type: 'research_paper'
+        }
+      });
+
+      if (aiError) {
+        console.error('AI Error:', aiError);
+        toast.error('حدث خطأ في إنشاء البحث');
+        return;
+      }
+
+      if (aiResponse.error) {
+        toast.error(aiResponse.error);
+        return;
+      }
+
+      setPaper(aiResponse.response);
+      
+      // تحديث قاعدة البيانات بالاستجابة
+      const wordCount = aiResponse.response.split(/\s+/).length;
+      await supabase
+        .rpc('deduct_credits', {
+          p_user_id: user.id,
+          p_credits_to_deduct: 0,
+          p_request_type: 'research_paper',
+          p_content: `${title} - ${topic} - ${requirements}`,
+          p_response: aiResponse.response,
           p_word_count: wordCount,
           p_pages_count: Math.ceil(wordCount / 250)
         });
-      }
       
       toast.success('تم إنشاء البحث الأكاديمي بنجاح');
     } catch (error) {
+      console.error('Error:', error);
       toast.error('حدث خطأ أثناء إنشاء البحث');
     } finally {
       setLoading(false);
     }
   };
 
-  const downloadPaper = () => {
-    if (!paper) return;
-    
-    const element = document.createElement('a');
-    const file = new Blob([paper], { type: 'text/plain' });
-    element.href = URL.createObjectURL(file);
-    element.download = `research-paper-${title.replace(/\s+/g, '-')}.txt`;
-    document.body.appendChild(element);
-    element.click();
-    document.body.removeChild(element);
-    toast.success('تم تحميل البحث');
-  };
 
   return (
     <Card className="card-glow">
@@ -206,26 +158,13 @@ ${requirements ? `\n**متطلبات إضافية تم مراعاتها**: ${req
           )}
         </Button>
 
-        {paper && (
-          <div className="mt-6 space-y-4">
-            <div className="flex justify-between items-center">
-              <h3 className="font-semibold text-primary">البحث الأكاديمي:</h3>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={downloadPaper}
-              >
-                <Download className="w-4 h-4 ml-2" />
-                تحميل
-              </Button>
-            </div>
-            <div className="p-4 bg-secondary/50 rounded-lg border max-h-96 overflow-y-auto">
-              <div className="whitespace-pre-line leading-relaxed text-sm">
-                {paper}
-              </div>
-            </div>
-          </div>
-        )}
+        <AIResponse
+          response={paper}
+          model="Gemini 2.0 Flash"
+          type="research"
+          isLoading={loading}
+          originalQuery={`${title} - ${topic}`}
+        />
       </CardContent>
     </Card>
   );
