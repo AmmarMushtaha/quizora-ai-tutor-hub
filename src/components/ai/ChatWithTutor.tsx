@@ -190,8 +190,8 @@ const ChatWithTutor = () => {
   const getCreditsNeeded = () => answerType === 'concise' ? 2 : 3;
 
   return (
-    <Card className="h-[600px] flex flex-col">
-      <CardHeader className="pb-4">
+    <Card className="w-full max-w-4xl mx-auto h-[600px] flex flex-col overflow-hidden">
+      <CardHeader className="pb-4 flex-shrink-0">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-full bg-gradient-to-br from-primary to-accent flex items-center justify-center">
@@ -252,9 +252,9 @@ const ChatWithTutor = () => {
         </div>
       </CardHeader>
 
-      <CardContent className="flex-1 flex flex-col p-0">
+      <CardContent className="flex-1 flex flex-col p-0 min-h-0 overflow-hidden">
         {/* Messages Area */}
-        <ScrollArea className="flex-1 px-4">
+        <ScrollArea className="flex-1 px-4 max-h-[400px]">
           <div className="space-y-4 pb-4">
             {messages.length === 0 ? (
               <div className="text-center py-8 text-muted-foreground">
@@ -266,12 +266,12 @@ const ChatWithTutor = () => {
               messages.map((message) => (
                 <div
                   key={message.id}
-                  className={`flex gap-3 ${
+                  className={`flex gap-3 mb-4 ${
                     message.type === 'user' ? 'justify-end' : 'justify-start'
                   }`}
                 >
                   {message.type === 'assistant' && (
-                    <Avatar className="w-8 h-8 bg-gradient-to-br from-primary to-accent">
+                    <Avatar className="w-8 h-8 bg-gradient-to-br from-primary to-accent flex-shrink-0">
                       <AvatarFallback className="text-white">
                         <Bot className="w-4 h-4" />
                       </AvatarFallback>
@@ -279,13 +279,13 @@ const ChatWithTutor = () => {
                   )}
                   
                   <div
-                    className={`max-w-[80%] rounded-lg px-4 py-3 ${
+                    className={`max-w-[70%] rounded-lg px-4 py-3 word-wrap break-words ${
                       message.type === 'user'
-                        ? 'bg-primary text-primary-foreground ml-12'
+                        ? 'bg-primary text-primary-foreground'
                         : 'bg-muted'
                     }`}
                   >
-                    <div className="whitespace-pre-wrap text-sm leading-relaxed">
+                    <div className="whitespace-pre-wrap text-sm leading-relaxed overflow-wrap-anywhere">
                       {message.content}
                     </div>
                     <div className="flex items-center justify-between mt-2 text-xs opacity-70">
@@ -299,7 +299,7 @@ const ChatWithTutor = () => {
                   </div>
                   
                   {message.type === 'user' && (
-                    <Avatar className="w-8 h-8 bg-secondary">
+                    <Avatar className="w-8 h-8 bg-secondary flex-shrink-0">
                       <AvatarFallback>
                         <User className="w-4 h-4" />
                       </AvatarFallback>
@@ -312,16 +312,16 @@ const ChatWithTutor = () => {
           </div>
         </ScrollArea>
 
-        <Separator />
+        <Separator className="flex-shrink-0" />
 
         {/* Input Area */}
-        <form onSubmit={handleSubmit} className="p-4">
+        <form onSubmit={handleSubmit} className="p-4 flex-shrink-0">
           <div className="flex gap-2">
             <Textarea
               value={currentMessage}
               onChange={(e) => setCurrentMessage(e.target.value)}
               placeholder="اكتب سؤالك أو استفسارك هنا..."
-              className="min-h-[60px] resize-none"
+              className="min-h-[60px] max-h-[120px] resize-none"
               disabled={isLoading}
               onKeyDown={(e) => {
                 if (e.key === 'Enter' && !e.shiftKey) {
