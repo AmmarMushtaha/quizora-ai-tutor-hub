@@ -61,30 +61,30 @@ export type Database = {
       }
       conversation_history: {
         Row: {
+          content: string
           created_at: string
+          credits_used: number | null
           id: string
-          messages: Json
-          title: string
-          total_credits_used: number
-          updated_at: string
+          message_type: string
+          session_id: string
           user_id: string
         }
         Insert: {
+          content: string
           created_at?: string
+          credits_used?: number | null
           id?: string
-          messages?: Json
-          title: string
-          total_credits_used?: number
-          updated_at?: string
+          message_type: string
+          session_id?: string
           user_id: string
         }
         Update: {
+          content?: string
           created_at?: string
+          credits_used?: number | null
           id?: string
-          messages?: Json
-          title?: string
-          total_credits_used?: number
-          updated_at?: string
+          message_type?: string
+          session_id?: string
           user_id?: string
         }
         Relationships: []

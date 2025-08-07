@@ -34,6 +34,7 @@ const AudioSummary = React.lazy(() => import('@/components/ai/AudioSummary'));
 const MindMap = React.lazy(() => import('@/components/ai/MindMap'));
 const ResearchPaper = React.lazy(() => import('@/components/ai/ResearchPaper'));
 const TextEditing = React.lazy(() => import('@/components/ai/TextEditing'));
+const ChatWithTutor = React.lazy(() => import('@/components/ai/ChatWithTutor'));
 
 const Dashboard = () => {
   const { user } = useAuth();
@@ -115,6 +116,15 @@ const Dashboard = () => {
       credits: 8,
       gradient: 'from-indigo-500 to-indigo-600',
       component: TextEditing
+    },
+    {
+      id: 'chat-tutor',
+      icon: MessageSquare,
+      title: 'المعلم الذكي',
+      description: 'محادثة تفاعلية مع معلم ذكاء اصطناعي',
+      credits: 2,
+      gradient: 'from-teal-500 to-teal-600',
+      component: ChatWithTutor
     },
   ];
 

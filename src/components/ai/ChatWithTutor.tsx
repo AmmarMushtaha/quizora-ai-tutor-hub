@@ -1,0 +1,357 @@
+import React, { useState, useRef, useEffect } from 'react';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Textarea } from '@/components/ui/textarea';
+import { Badge } from '@/components/ui/badge';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { Separator } from '@/components/ui/separator';
+import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { 
+  Send, 
+  Loader2, 
+  MessageSquare, 
+  Bot, 
+  User, 
+  RefreshCw,
+  BookOpen,
+  Zap
+} from 'lucide-react';
+import { toast } from 'sonner';
+import { useAuth } from '@/hooks/useAuth';
+import { useProfile } from '@/hooks/useProfile';
+import { supabase } from '@/integrations/supabase/client';
+import { v4 as uuidv4 } from 'uuid';
+
+interface Message {
+  id: string;
+  type: 'user' | 'assistant';
+  content: string;
+  timestamp: Date;
+  creditsUsed?: number;
+}
+
+const ChatWithTutor = () => {
+  const { user } = useAuth();
+  const { profile, refreshCredits } = useProfile();
+  const [messages, setMessages] = useState<Message[]>([]);
+  const [currentMessage, setCurrentMessage] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+  const [sessionId] = useState(() => uuidv4());
+  const [answerType, setAnswerType] = useState<'concise' | 'detailed'>('detailed');
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  const scrollToBottom = () => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  };
+
+  useEffect(() => {
+    scrollToBottom();
+  }, [messages]);
+
+  // Load conversation history on component mount
+  useEffect(() => {
+    loadConversationHistory();
+  }, [sessionId, user]);
+
+  const loadConversationHistory = async () => {
+    if (!user) return;
+
+    try {
+      const { data, error } = await supabase
+        .from('conversation_history')
+        .select('*')
+        .eq('user_id', user.id)
+        .eq('session_id', sessionId)
+        .order('created_at', { ascending: true });
+
+      if (error) {
+        console.error('خطأ في تحميل تاريخ المحادثة:', error);
+        return;
+      }
+
+      if (data && data.length > 0) {
+        const loadedMessages: Message[] = data.map((item: any) => ({
+          id: item.id,
+          type: item.message_type,
+          content: item.content,
+          timestamp: new Date(item.created_at),
+          creditsUsed: item.credits_used
+        }));
+        setMessages(loadedMessages);
+      }
+    } catch (error) {
+      console.error('خطأ في تحميل المحادثة:', error);
+    }
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!currentMessage.trim()) return;
+    
+    if (!user) {
+      toast.error('يجب تسجيل الدخول أولاً');
+      return;
+    }
+
+    const creditsNeeded = answerType === 'concise' ? 2 : 3;
+    
+    if (!profile || profile.credits < creditsNeeded) {
+      toast.error(`تحتاج إلى ${creditsNeeded} نقاط على الأقل`);
+      return;
+    }
+
+    setIsLoading(true);
+
+    try {
+      // Add user message to UI immediately
+      const userMessage: Message = {
+        id: uuidv4(),
+        type: 'user',
+        content: currentMessage,
+        timestamp: new Date()
+      };
+
+      const updatedMessages = [...messages, userMessage];
+      setMessages(updatedMessages);
+      setCurrentMessage('');
+
+      // Deduct credits
+      const { data: creditResult, error: creditError } = await supabase.rpc('deduct_credits', {
+        p_user_id: user.id,
+        p_credits_to_deduct: creditsNeeded,
+        p_request_type: 'text_question',
+        p_content: currentMessage,
+        p_response: null
+      });
+
+      if (creditError || !creditResult) {
+        toast.error('فشل في خصم النقاط');
+        setMessages(messages); // Revert messages
+        return;
+      }
+
+      // Prepare messages for API (convert to expected format)
+      const apiMessages = updatedMessages.map(msg => ({
+        type: msg.type,
+        content: msg.content
+      }));
+
+      // Call chat API
+      const { data, error } = await supabase.functions.invoke('gemini-chat', {
+        body: {
+          messages: apiMessages,
+          sessionId,
+          answerType
+        }
+      });
+
+      if (error) {
+        console.error('Chat API error:', error);
+        toast.error('حدث خطأ في الاتصال بالمعلم الذكي');
+        return;
+      }
+
+      if (!data?.response) {
+        toast.error('لم يتم الحصول على رد من المعلم');
+        return;
+      }
+
+      // Add assistant response
+      const assistantMessage: Message = {
+        id: uuidv4(),
+        type: 'assistant',
+        content: data.response,
+        timestamp: new Date(),
+        creditsUsed: data.creditsUsed || creditsNeeded
+      };
+
+      setMessages(prev => [...prev, assistantMessage]);
+      refreshCredits();
+      
+      toast.success(`تم استخدام ${data.creditsUsed || creditsNeeded} نقاط`);
+
+    } catch (error) {
+      console.error('Error in chat:', error);
+      toast.error('حدث خطأ غير متوقع');
+      setMessages(messages); // Revert on error
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const startNewConversation = () => {
+    setMessages([]);
+    // Generate new session ID for new conversation
+    window.location.reload();
+  };
+
+  const getCreditsNeeded = () => answerType === 'concise' ? 2 : 3;
+
+  return (
+    <Card className="h-[600px] flex flex-col">
+      <CardHeader className="pb-4">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-primary to-accent flex items-center justify-center">
+              <Bot className="w-5 h-5 text-white" />
+            </div>
+            <div>
+              <CardTitle className="text-xl">المعلم الذكي</CardTitle>
+              <p className="text-sm text-muted-foreground">محادثة تفاعلية مع معلم ذكاء اصطناعي</p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={startNewConversation}
+              className="gap-2"
+            >
+              <RefreshCw className="w-4 h-4" />
+              محادثة جديدة
+            </Button>
+          </div>
+        </div>
+        
+        <div className="flex items-center gap-4 pt-2">
+          <div className="flex items-center gap-2">
+            <label className="text-sm font-medium">نوع الإجابة:</label>
+            <Select
+              value={answerType}
+              onValueChange={(value: 'concise' | 'detailed') => setAnswerType(value)}
+            >
+              <SelectTrigger className="w-40">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="concise">
+                  <div className="flex items-center gap-2">
+                    <Zap className="w-4 h-4" />
+                    مختصرة (2 نقاط)
+                  </div>
+                </SelectItem>
+                <SelectItem value="detailed">
+                  <div className="flex items-center gap-2">
+                    <BookOpen className="w-4 h-4" />
+                    مفصلة (3 نقاط)
+                  </div>
+                </SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          
+          <Badge 
+            variant="secondary" 
+            className="gap-1"
+          >
+            <MessageSquare className="w-3 h-3" />
+            {getCreditsNeeded()} نقاط للرسالة
+          </Badge>
+        </div>
+      </CardHeader>
+
+      <CardContent className="flex-1 flex flex-col p-0">
+        {/* Messages Area */}
+        <ScrollArea className="flex-1 px-4">
+          <div className="space-y-4 pb-4">
+            {messages.length === 0 ? (
+              <div className="text-center py-8 text-muted-foreground">
+                <Bot className="w-12 h-12 mx-auto mb-4 opacity-50" />
+                <p className="text-lg font-medium mb-2">مرحباً! أنا معلمك الذكي</p>
+                <p className="text-sm">اطرح أي سؤال تريد التعلم عنه وسأساعدك في فهمه</p>
+              </div>
+            ) : (
+              messages.map((message) => (
+                <div
+                  key={message.id}
+                  className={`flex gap-3 ${
+                    message.type === 'user' ? 'justify-end' : 'justify-start'
+                  }`}
+                >
+                  {message.type === 'assistant' && (
+                    <Avatar className="w-8 h-8 bg-gradient-to-br from-primary to-accent">
+                      <AvatarFallback className="text-white">
+                        <Bot className="w-4 h-4" />
+                      </AvatarFallback>
+                    </Avatar>
+                  )}
+                  
+                  <div
+                    className={`max-w-[80%] rounded-lg px-4 py-3 ${
+                      message.type === 'user'
+                        ? 'bg-primary text-primary-foreground ml-12'
+                        : 'bg-muted'
+                    }`}
+                  >
+                    <div className="whitespace-pre-wrap text-sm leading-relaxed">
+                      {message.content}
+                    </div>
+                    <div className="flex items-center justify-between mt-2 text-xs opacity-70">
+                      <span>{message.timestamp.toLocaleTimeString('ar-SA')}</span>
+                      {message.creditsUsed && (
+                        <Badge variant="outline" className="text-xs">
+                          {message.creditsUsed} نقاط
+                        </Badge>
+                      )}
+                    </div>
+                  </div>
+                  
+                  {message.type === 'user' && (
+                    <Avatar className="w-8 h-8 bg-secondary">
+                      <AvatarFallback>
+                        <User className="w-4 h-4" />
+                      </AvatarFallback>
+                    </Avatar>
+                  )}
+                </div>
+              ))
+            )}
+            <div ref={messagesEndRef} />
+          </div>
+        </ScrollArea>
+
+        <Separator />
+
+        {/* Input Area */}
+        <form onSubmit={handleSubmit} className="p-4">
+          <div className="flex gap-2">
+            <Textarea
+              value={currentMessage}
+              onChange={(e) => setCurrentMessage(e.target.value)}
+              placeholder="اكتب سؤالك أو استفسارك هنا..."
+              className="min-h-[60px] resize-none"
+              disabled={isLoading}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && !e.shiftKey) {
+                  e.preventDefault();
+                  handleSubmit(e);
+                }
+              }}
+            />
+            <Button
+              type="submit"
+              disabled={isLoading || !currentMessage.trim() || !profile || profile.credits < getCreditsNeeded()}
+              className="px-4 h-[60px]"
+            >
+              {isLoading ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : (
+                <Send className="w-4 h-4" />
+              )}
+            </Button>
+          </div>
+          
+          {profile && profile.credits < getCreditsNeeded() && (
+            <p className="text-sm text-destructive mt-2">
+              تحتاج إلى {getCreditsNeeded()} نقاط على الأقل لإرسال رسالة
+            </p>
+          )}
+        </form>
+      </CardContent>
+    </Card>
+  );
+};
+
+export default ChatWithTutor;
