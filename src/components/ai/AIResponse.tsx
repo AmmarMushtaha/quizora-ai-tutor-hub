@@ -3,6 +3,7 @@ import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import { Badge } from '@/components/ui/badge';
+import AITable from '@/components/ui/ai-table';
 import { 
   Copy, 
   Check, 
@@ -18,7 +19,8 @@ import {
   BookOpen,
   Languages,
   RotateCcw,
-  MessageSquare
+  MessageSquare,
+  Table as TableIcon
 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -66,48 +68,190 @@ const AIResponse = ({ response, model, type, isLoading = false, originalQuery }:
     return () => clearInterval(timer);
   }, [response, isLoading]);
 
-  const formatText = (text: string) => {
-    // تنسيق النص بطريقة متقدمة
-    return text
-      .split('\n')
-      .map((line, index) => {
-        // عناوين
-        if (line.startsWith('#')) {
-          const level = line.match(/^#+/)?.[0].length || 1;
-          const title = line.replace(/^#+\s*/, '');
-          return (
-            <h2 
-              key={index} 
-              className={`font-bold text-gradient mb-4 mt-6 ${
-                level === 1 ? 'text-2xl' : level === 2 ? 'text-xl' : 'text-lg'
-              }`}
-            >
-              {title}
-            </h2>
-          );
+  // دالة تحليل الجداول من النص
+  const parseTablesFromText = (text: string) => {
+    const lines = text.split('\n');
+    const tables = [];
+    let currentTable = null;
+    let tableStartIndex = -1;
+
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i].trim();
+      
+      // البحث عن بداية جدول (خط يحتوي على عدة | أو فواصل)
+      if (line.includes('|') && line.split('|').length >= 3) {
+        if (!currentTable) {
+          // بداية جدول جديد
+          currentTable = {
+            headers: [],
+            rows: [],
+            startIndex: i,
+            endIndex: i
+          };
+          tableStartIndex = i;
+          
+          // استخراج العناوين
+          const headers = line.split('|').map(h => h.trim()).filter(h => h);
+          currentTable.headers = headers;
+        } else {
+          // استمرار الجدول
+          const row = line.split('|').map(c => c.trim()).filter(c => c);
+          if (row.length === currentTable.headers.length) {
+            currentTable.rows.push(row);
+            currentTable.endIndex = i;
+          }
         }
+      }
+      // البحث عن جدول بالفواصل
+      else if (line.includes(',') && line.split(',').length >= 2 && 
+               (line.toLowerCase().includes('الاسم') || 
+                line.toLowerCase().includes('العنوان') ||
+                line.toLowerCase().includes('البيانات') ||
+                i === 0 || lines[i-1]?.includes(','))) {
         
-        // نقاط
-        if (line.trim().startsWith('-') || line.trim().startsWith('•')) {
-          return (
-            <div key={index} className="flex items-start gap-2 mb-2">
-              <Sparkles className="w-4 h-4 text-primary mt-1 flex-shrink-0" />
-              <span className="leading-relaxed">{line.replace(/^[-•]\s*/, '')}</span>
+        if (!currentTable) {
+          currentTable = {
+            headers: [],
+            rows: [],
+            startIndex: i,
+            endIndex: i
+          };
+          tableStartIndex = i;
+          
+          const headers = line.split(',').map(h => h.trim());
+          currentTable.headers = headers;
+        } else {
+          const row = line.split(',').map(c => c.trim());
+          if (row.length === currentTable.headers.length) {
+            currentTable.rows.push(row);
+            currentTable.endIndex = i;
+          }
+        }
+      }
+      // نهاية الجدول أو خط فاصل
+      else if (currentTable && (line === '' || line.match(/^[-=+\s]*$/))) {
+        if (currentTable.rows.length > 0) {
+          // تحديد نوع الجدول
+          let tableType = 'data';
+          if (currentTable.headers.some(h => h.includes('ترتيب') || h.includes('رقم'))) {
+            tableType = 'ranking';
+          } else if (currentTable.headers.length > 2 && currentTable.headers.some(h => h.includes('مقارنة'))) {
+            tableType = 'comparison';
+          } else if (currentTable.headers.some(h => h.includes('تقدم') || h.includes('نسبة') || h.includes('%'))) {
+            tableType = 'progress';
+          }
+
+          tables.push({
+            headers: currentTable.headers,
+            rows: currentTable.rows,
+            type: tableType,
+            startIndex: currentTable.startIndex,
+            endIndex: currentTable.endIndex
+          });
+        }
+        currentTable = null;
+      }
+    }
+
+    // إضافة الجدول الأخير إذا كان موجود
+    if (currentTable && currentTable.rows.length > 0) {
+      let tableType = 'data';
+      if (currentTable.headers.some(h => h.includes('ترتيب') || h.includes('رقم'))) {
+        tableType = 'ranking';
+      } else if (currentTable.headers.length > 2 && currentTable.headers.some(h => h.includes('مقارنة'))) {
+        tableType = 'comparison';
+      } else if (currentTable.headers.some(h => h.includes('تقدم') || h.includes('نسبة') || h.includes('%'))) {
+        tableType = 'progress';
+      }
+
+      tables.push({
+        headers: currentTable.headers,
+        rows: currentTable.rows,
+        type: tableType,
+        startIndex: currentTable.startIndex,
+        endIndex: currentTable.endIndex
+      });
+    }
+
+    return tables;
+  };
+
+  const formatText = (text: string) => {
+    const tables = parseTablesFromText(text);
+    const lines = text.split('\n');
+    const elements = [];
+    let processedLines = new Set();
+
+    // إضافة الجداول في مواضعها الصحيحة
+    tables.forEach((table, tableIndex) => {
+      for (let i = table.startIndex; i <= table.endIndex; i++) {
+        processedLines.add(i);
+      }
+    });
+
+    let currentTableIndex = 0;
+    
+    lines.forEach((line, index) => {
+      // إذا كان هذا الخط جزء من جدول
+      if (processedLines.has(index)) {
+        // إضافة الجدول في بداية أول خط منه فقط
+        if (currentTableIndex < tables.length && tables[currentTableIndex].startIndex === index) {
+          const table = tables[currentTableIndex];
+          elements.push(
+            <div key={`table-${currentTableIndex}`} className="my-6">
+              <AITable 
+                data={{
+                  headers: table.headers,
+                  rows: table.rows,
+                  type: table.type
+                }}
+              />
             </div>
           );
+          currentTableIndex++;
         }
-        
-        // نص عادي
-        if (line.trim()) {
-          return (
-            <p key={index} className="leading-relaxed mb-4 text-justify">
-              {line}
-            </p>
-          );
-        }
-        
-        return <div key={index} className="h-2" />;
-      });
+        return;
+      }
+
+      // عناوين
+      if (line.startsWith('#')) {
+        const level = line.match(/^#+/)?.[0].length || 1;
+        const title = line.replace(/^#+\s*/, '');
+        elements.push(
+          <h2 
+            key={`heading-${index}`} 
+            className={`font-bold text-gradient mb-4 mt-6 ${
+              level === 1 ? 'text-2xl' : level === 2 ? 'text-xl' : 'text-lg'
+            }`}
+          >
+            {title}
+          </h2>
+        );
+      }
+      // نقاط
+      else if (line.trim().startsWith('-') || line.trim().startsWith('•')) {
+        elements.push(
+          <div key={`bullet-${index}`} className="flex items-start gap-2 mb-2">
+            <Sparkles className="w-4 h-4 text-primary mt-1 flex-shrink-0" />
+            <span className="leading-relaxed">{line.replace(/^[-•]\s*/, '')}</span>
+          </div>
+        );
+      }
+      // نص عادي
+      else if (line.trim()) {
+        elements.push(
+          <p key={`text-${index}`} className="leading-relaxed mb-4 text-justify">
+            {line}
+          </p>
+        );
+      }
+      // مساحة فارغة
+      else {
+        elements.push(<div key={`space-${index}`} className="h-2" />);
+      }
+    });
+
+    return elements;
   };
 
   const copyToClipboard = async () => {
@@ -171,22 +315,28 @@ const AIResponse = ({ response, model, type, isLoading = false, originalQuery }:
   };
 
   const getTypeIcon = () => {
+    // التحقق من وجود جداول في النص
+    const hasTable = response.includes('|') || (response.includes(',') && response.split('\n').some(line => line.split(',').length >= 3));
+    
     switch (type) {
       case 'image': return <Eye className="w-4 h-4" />;
       case 'research': return <BookOpen className="w-4 h-4" />;
       case 'editing': return <Type className="w-4 h-4" />;
       case 'mindmap': return <MessageSquare className="w-4 h-4" />;
-      default: return <Sparkles className="w-4 h-4" />;
+      default: return hasTable ? <TableIcon className="w-4 h-4" /> : <Sparkles className="w-4 h-4" />;
     }
   };
 
   const getTypeLabel = () => {
+    // التحقق من وجود جداول في النص
+    const hasTable = response.includes('|') || (response.includes(',') && response.split('\n').some(line => line.split(',').length >= 3));
+    
     switch (type) {
       case 'image': return 'تحليل صورة';
       case 'research': return 'بحث أكاديمي';
       case 'editing': return 'تحرير نص';
       case 'mindmap': return 'خريطة ذهنية';
-      default: return 'إجابة نصية';
+      default: return hasTable ? 'إجابة مع جداول' : 'إجابة نصية';
     }
   };
 
