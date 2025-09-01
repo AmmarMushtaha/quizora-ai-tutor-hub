@@ -95,10 +95,9 @@ const ChatWithTutor = () => {
       return;
     }
 
-    const creditsNeeded = answerType === 'concise' ? 2 : 3;
-    
-    if (!profile || profile.credits < creditsNeeded) {
-      toast.error(`تحتاج إلى ${creditsNeeded} نقاط على الأقل`);
+    // Check minimum credits (at least 1 credit needed)
+    if (!profile || profile.credits < 1) {
+      toast.error('تحتاج إلى نقطة واحدة على الأقل لإرسال رسالة');
       return;
     }
 
@@ -115,22 +114,8 @@ const ChatWithTutor = () => {
 
       const updatedMessages = [...messages, userMessage];
       setMessages(updatedMessages);
+      const currentMessageText = currentMessage;
       setCurrentMessage('');
-
-      // Deduct credits
-      const { data: creditResult, error: creditError } = await supabase.rpc('deduct_credits', {
-        p_user_id: user.id,
-        p_credits_to_deduct: creditsNeeded,
-        p_request_type: 'text_question',
-        p_content: currentMessage,
-        p_response: null
-      });
-
-      if (creditError || !creditResult) {
-        toast.error('فشل في خصم النقاط');
-        setMessages(messages); // Revert messages
-        return;
-      }
 
       // Prepare messages for API (convert to expected format)
       const apiMessages = updatedMessages.map(msg => ({
@@ -150,11 +135,37 @@ const ChatWithTutor = () => {
       if (error) {
         console.error('Chat API error:', error);
         toast.error('حدث خطأ في الاتصال بالمعلم الذكي');
+        setMessages(messages); // Revert messages
         return;
       }
 
       if (!data?.response) {
         toast.error('لم يتم الحصول على رد من المعلم');
+        setMessages(messages); // Revert messages
+        return;
+      }
+
+      const creditsUsed = data.creditsUsed || 1;
+
+      // Check if user has enough credits for the actual response
+      if (profile.credits < creditsUsed) {
+        toast.error(`الإجابة تحتاج ${creditsUsed} نقاط وليس لديك رصيد كافٍ`);
+        setMessages(messages); // Revert messages
+        return;
+      }
+
+      // Deduct the actual credits used
+      const { data: creditResult, error: creditError } = await supabase.rpc('deduct_credits', {
+        p_user_id: user.id,
+        p_credits_to_deduct: creditsUsed,
+        p_request_type: 'text_question',
+        p_content: currentMessageText,
+        p_response: data.response
+      });
+
+      if (creditError || !creditResult) {
+        toast.error('فشل في خصم النقاط');
+        setMessages(messages); // Revert messages
         return;
       }
 
@@ -164,13 +175,13 @@ const ChatWithTutor = () => {
         type: 'assistant',
         content: data.response,
         timestamp: new Date(),
-        creditsUsed: data.creditsUsed || creditsNeeded
+        creditsUsed: creditsUsed
       };
 
       setMessages(prev => [...prev, assistantMessage]);
       refreshCredits();
       
-      toast.success(`تم استخدام ${data.creditsUsed || creditsNeeded} نقاط`);
+      toast.success(`تم استخدام ${creditsUsed} ${creditsUsed === 1 ? 'نقطة' : 'نقاط'} (${data.responseLength || 0} حرف)`);
 
     } catch (error) {
       console.error('Error in chat:', error);
@@ -187,7 +198,7 @@ const ChatWithTutor = () => {
     window.location.reload();
   };
 
-  const getCreditsNeeded = () => answerType === 'concise' ? 2 : 3;
+  const getMinCreditsNeeded = () => 1; // Minimum 1 credit needed
 
   return (
     <Card className="w-full max-w-4xl mx-auto h-[600px] flex flex-col overflow-hidden">
@@ -229,13 +240,13 @@ const ChatWithTutor = () => {
                 <SelectItem value="concise">
                   <div className="flex items-center gap-2">
                     <Zap className="w-4 h-4" />
-                    مختصرة (2 نقاط)
+                    مختصرة
                   </div>
                 </SelectItem>
                 <SelectItem value="detailed">
                   <div className="flex items-center gap-2">
                     <BookOpen className="w-4 h-4" />
-                    مفصلة (3 نقاط)
+                    مفصلة
                   </div>
                 </SelectItem>
               </SelectContent>
@@ -247,7 +258,7 @@ const ChatWithTutor = () => {
             className="gap-1"
           >
             <MessageSquare className="w-3 h-3" />
-            {getCreditsNeeded()} نقاط للرسالة
+            النقاط حسب طول الإجابة (1-10 نقاط)
           </Badge>
         </div>
       </CardHeader>
@@ -332,7 +343,7 @@ const ChatWithTutor = () => {
             />
             <Button
               type="submit"
-              disabled={isLoading || !currentMessage.trim() || !profile || profile.credits < getCreditsNeeded()}
+              disabled={isLoading || !currentMessage.trim() || !profile || profile.credits < getMinCreditsNeeded()}
               className="px-4 h-[60px]"
             >
               {isLoading ? (
@@ -343,9 +354,9 @@ const ChatWithTutor = () => {
             </Button>
           </div>
           
-          {profile && profile.credits < getCreditsNeeded() && (
+          {profile && profile.credits < getMinCreditsNeeded() && (
             <p className="text-sm text-destructive mt-2">
-              تحتاج إلى {getCreditsNeeded()} نقاط على الأقل لإرسال رسالة
+              تحتاج إلى نقطة واحدة على الأقل لإرسال رسالة
             </p>
           )}
         </form>

@@ -156,6 +156,18 @@ serve(async (req) => {
 
     const generatedResponse = data.candidates[0].content.parts[0].text;
 
+    // Calculate credits based on response length
+    // 1 credit per ~150 characters (suitable for Arabic text)
+    // Minimum 1 credit, maximum 10 credits per response
+    const responseLength = generatedResponse.length;
+    const calculatedCredits = Math.min(Math.max(Math.ceil(responseLength / 150), 1), 10);
+
+    console.log('Response stats:', { 
+      responseLength, 
+      calculatedCredits,
+      answerType 
+    });
+
     // Save conversation to database
     const conversationData = [
       {
@@ -170,7 +182,7 @@ serve(async (req) => {
         session_id: sessionId,
         message_type: 'assistant',
         content: generatedResponse,
-        credits_used: answerType === 'concise' ? 2 : 3
+        credits_used: calculatedCredits
       }
     ];
 
@@ -189,7 +201,8 @@ serve(async (req) => {
       JSON.stringify({ 
         response: generatedResponse,
         answerType,
-        creditsUsed: answerType === 'concise' ? 2 : 3
+        creditsUsed: calculatedCredits,
+        responseLength
       }),
       {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
