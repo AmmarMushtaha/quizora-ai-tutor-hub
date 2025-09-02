@@ -18,17 +18,26 @@ interface AITableProps {
 
 const FlashText = memo(({ text, delay = 0 }: { text: string; delay?: number }) => {
   const [isVisible, setIsVisible] = useState(false);
+  const [isPulsing, setIsPulsing] = useState(true);
 
   useEffect(() => {
     const timer = setTimeout(() => {
       setIsVisible(true);
     }, delay);
+    
+    // إيقاف الوميض بعد ثانية ونصف
+    const pulseTimer = setTimeout(() => {
+      setIsPulsing(false);
+    }, delay + 1500);
 
-    return () => clearTimeout(timer);
+    return () => {
+      clearTimeout(timer);
+      clearTimeout(pulseTimer);
+    };
   }, [delay]);
 
   return (
-    <span className={`transition-all duration-300 ${isVisible ? 'opacity-100' : 'opacity-0'}`}>
+    <span className={`${isVisible ? 'animate-fade-in' : 'opacity-0'} ${isPulsing ? 'animate-pulse' : ''}`}>
       {text}
     </span>
   );
@@ -37,12 +46,18 @@ const FlashText = memo(({ text, delay = 0 }: { text: string; delay?: number }) =
 const AITable = ({ data, className = '' }: AITableProps) => {
   const { headers, rows, title, type = 'data' } = data;
   const [isVisible, setIsVisible] = useState(false);
+  const [isPulsing, setIsPulsing] = useState(true);
 
   useEffect(() => {
-    // إظهار الجدول مباشرة مع وميض سريع
+    // إظهار الجدول مع fade-in
     setTimeout(() => {
       setIsVisible(true);
     }, 100);
+    
+    // إيقاف الوميض بعد ثانيتين
+    setTimeout(() => {
+      setIsPulsing(false);
+    }, 2000);
   }, []);
 
   const getTableTypeLabel = () => {
@@ -55,9 +70,9 @@ const AITable = ({ data, className = '' }: AITableProps) => {
   };
 
   return (
-    <Card className={`border border-border/50 shadow-sm transition-all duration-500 ${
-      isVisible ? 'opacity-100 animate-pulse' : 'opacity-0'
-    } ${className}`}>
+    <Card className={`border border-border/50 shadow-sm ${
+      isVisible ? 'animate-fade-in' : 'opacity-0'
+    } ${isPulsing ? 'animate-pulse' : ''} ${className}`}>
       {/* Header مبسط */}
       <div className="border-b p-3 bg-muted/30">
         <div className="flex items-center gap-2">

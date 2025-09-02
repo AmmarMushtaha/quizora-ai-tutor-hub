@@ -40,18 +40,24 @@ const AIResponse = ({ response, model, type, isLoading = false, originalQuery }:
   const [theme, setTheme] = useState('default');
   const [showActions, setShowActions] = useState(false);
   const [isVisible, setIsVisible] = useState(false);
+  const [isPulsing, setIsPulsing] = useState(true);
   const textRef = useRef<HTMLDivElement>(null);
   const speechRef = useRef<SpeechSynthesisUtterance | null>(null);
 
-  // تأثير الوميض السريع
+  // تأثير Gemini - fade in مع وميض مؤقت
   useEffect(() => {
     if (!response || isLoading) return;
     
-    // إظهار النص مباشرة مع تأثير وميض
+    // إظهار النص مع fade-in
     setTimeout(() => {
       setIsVisible(true);
+    }, 100);
+    
+    // إيقاف الوميض بعد ثانيتين
+    setTimeout(() => {
+      setIsPulsing(false);
       setShowActions(true);
-    }, 200);
+    }, 2000);
   }, [response, isLoading]);
 
   // دالة تحليل الجداول من النص
@@ -420,9 +426,9 @@ const AIResponse = ({ response, model, type, isLoading = false, originalQuery }:
         <div className={`transition-all duration-300 ${getThemeClass()}`}>
           <div 
             ref={textRef}
-            className={`p-6 ${getFontSizeClass()} leading-relaxed transition-all duration-500 ${
-              isVisible ? 'opacity-100 animate-pulse' : 'opacity-0'
-            }`}
+            className={`p-6 ${getFontSizeClass()} leading-relaxed ${
+              isVisible ? 'animate-fade-in' : 'opacity-0'
+            } ${isPulsing ? 'animate-pulse' : ''}`}
           >
             {isVisible && formatText(response)}
           </div>
