@@ -16,41 +16,34 @@ interface AITableProps {
   className?: string;
 }
 
-const TypewriterText = memo(({ text, delay = 0 }: { text: string; delay?: number }) => {
-  const [displayText, setDisplayText] = useState('');
-  const [currentIndex, setCurrentIndex] = useState(0);
+const FlashText = memo(({ text, delay = 0 }: { text: string; delay?: number }) => {
+  const [isVisible, setIsVisible] = useState(false);
 
   useEffect(() => {
     const timer = setTimeout(() => {
-      if (currentIndex < text.length) {
-        setDisplayText(text.substring(0, currentIndex + 1));
-        setCurrentIndex(prev => prev + 1);
-      }
-    }, delay + currentIndex * 20); // أسرع في الكتابة
+      setIsVisible(true);
+    }, delay);
 
     return () => clearTimeout(timer);
-  }, [currentIndex, text, delay]);
+  }, [delay]);
 
   return (
-    <span className="inline-block">
-      {displayText}
-      {currentIndex < text.length && <span className="animate-pulse">|</span>}
+    <span className={`transition-all duration-300 ${isVisible ? 'opacity-100' : 'opacity-0'}`}>
+      {text}
     </span>
   );
 });
 
 const AITable = ({ data, className = '' }: AITableProps) => {
   const { headers, rows, title, type = 'data' } = data;
-  const [visibleRows, setVisibleRows] = useState<number[]>([]);
+  const [isVisible, setIsVisible] = useState(false);
 
   useEffect(() => {
-    // إظهار الصفوف تدريجياً
-    rows.forEach((_, index) => {
-      setTimeout(() => {
-        setVisibleRows(prev => [...prev, index]);
-      }, index * 150); // تأخير قصير بين كل صف
-    });
-  }, [rows]);
+    // إظهار الجدول مباشرة مع وميض سريع
+    setTimeout(() => {
+      setIsVisible(true);
+    }, 100);
+  }, []);
 
   const getTableTypeLabel = () => {
     switch (type) {
@@ -62,7 +55,9 @@ const AITable = ({ data, className = '' }: AITableProps) => {
   };
 
   return (
-    <Card className={`border border-border/50 shadow-sm ${className}`}>
+    <Card className={`border border-border/50 shadow-sm transition-all duration-500 ${
+      isVisible ? 'opacity-100 animate-pulse' : 'opacity-0'
+    } ${className}`}>
       {/* Header مبسط */}
       <div className="border-b p-3 bg-muted/30">
         <div className="flex items-center gap-2">
@@ -77,54 +72,50 @@ const AITable = ({ data, className = '' }: AITableProps) => {
       </div>
 
       {/* Table مبسط */}
-      <div className="overflow-x-auto">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              {headers.map((header, index) => (
-                <TableHead 
-                  key={index} 
-                  className="text-center font-medium text-foreground bg-muted/20 h-10"
-                >
-                  <TypewriterText text={header} delay={index * 100} />
-                </TableHead>
-              ))}
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {rows.map((row, rowIndex) => (
-              <TableRow 
-                key={rowIndex}
-                className={`
-                  ${visibleRows.includes(rowIndex) ? 'opacity-100' : 'opacity-0'} 
-                  transition-opacity duration-300
-                  ${rowIndex % 2 === 0 ? 'bg-muted/10' : ''}
-                `}
-                style={{
-                  transitionDelay: `${rowIndex * 150}ms`
-                }}
-              >
-                {row.map((cell, cellIndex) => (
-                  <TableCell 
-                    key={cellIndex}
-                    className={`
-                      text-center py-3 text-sm
-                      ${cellIndex === 0 ? 'font-medium' : ''}
-                    `}
+      {isVisible && (
+        <div className="overflow-x-auto">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                {headers.map((header, index) => (
+                  <TableHead 
+                    key={index} 
+                    className="text-center font-medium text-foreground bg-muted/20 h-10"
                   >
-                    {visibleRows.includes(rowIndex) && (
-                      <TypewriterText 
-                        text={cell} 
-                        delay={rowIndex * 150 + cellIndex * 50} 
-                      />
-                    )}
-                  </TableCell>
+                    <FlashText text={header} delay={index * 50} />
+                  </TableHead>
                 ))}
               </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      </div>
+            </TableHeader>
+            <TableBody>
+              {rows.map((row, rowIndex) => (
+                <TableRow 
+                  key={rowIndex}
+                  className={`
+                    transition-opacity duration-300
+                    ${rowIndex % 2 === 0 ? 'bg-muted/10' : ''}
+                  `}
+                >
+                  {row.map((cell, cellIndex) => (
+                    <TableCell 
+                      key={cellIndex}
+                      className={`
+                        text-center py-3 text-sm
+                        ${cellIndex === 0 ? 'font-medium' : ''}
+                      `}
+                    >
+                      <FlashText 
+                        text={cell} 
+                        delay={rowIndex * 30 + cellIndex * 20} 
+                      />
+                    </TableCell>
+                  ))}
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </div>
+      )}
 
       {/* Footer مبسط */}
       <div className="border-t p-2 bg-muted/10">

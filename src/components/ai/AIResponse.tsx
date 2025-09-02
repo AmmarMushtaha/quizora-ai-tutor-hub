@@ -33,39 +33,25 @@ interface AIResponseProps {
 }
 
 const AIResponse = ({ response, model, type, isLoading = false, originalQuery }: AIResponseProps) => {
-  const [displayedText, setDisplayedText] = useState('');
-  const [isTyping, setIsTyping] = useState(false);
   const [copied, setCopied] = useState(false);
   const [isReading, setIsReading] = useState(false);
   const [showFullscreen, setShowFullscreen] = useState(false);
   const [fontSize, setFontSize] = useState('normal');
   const [theme, setTheme] = useState('default');
   const [showActions, setShowActions] = useState(false);
+  const [isVisible, setIsVisible] = useState(false);
   const textRef = useRef<HTMLDivElement>(null);
   const speechRef = useRef<SpeechSynthesisUtterance | null>(null);
 
-  // تأثير الكتابة التدريجي
+  // تأثير الوميض السريع
   useEffect(() => {
     if (!response || isLoading) return;
-
-    setIsTyping(true);
-    setDisplayedText('');
     
-    let index = 0;
-    const typeSpeed = response.length > 1000 ? 20 : 50; // سرعة الكتابة
-
-    const timer = setInterval(() => {
-      if (index < response.length) {
-        setDisplayedText(response.slice(0, index + 1));
-        index++;
-      } else {
-        setIsTyping(false);
-        setShowActions(true);
-        clearInterval(timer);
-      }
-    }, typeSpeed);
-
-    return () => clearInterval(timer);
+    // إظهار النص مباشرة مع تأثير وميض
+    setTimeout(() => {
+      setIsVisible(true);
+      setShowActions(true);
+    }, 200);
   }, [response, isLoading]);
 
   // دالة تحليل الجداول من النص
@@ -434,13 +420,11 @@ const AIResponse = ({ response, model, type, isLoading = false, originalQuery }:
         <div className={`transition-all duration-300 ${getThemeClass()}`}>
           <div 
             ref={textRef}
-            className={`p-6 ${getFontSizeClass()} leading-relaxed`}
+            className={`p-6 ${getFontSizeClass()} leading-relaxed transition-all duration-500 ${
+              isVisible ? 'opacity-100 animate-pulse' : 'opacity-0'
+            }`}
           >
-            {formatText(displayedText)}
-            
-            {isTyping && (
-              <span className="inline-block w-2 h-6 bg-primary animate-pulse ml-1" />
-            )}
+            {isVisible && formatText(response)}
           </div>
 
           {/* Actions */}
