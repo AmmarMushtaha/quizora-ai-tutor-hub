@@ -46,18 +46,32 @@ const AIResponse = ({ response, model, type, isLoading = false, originalQuery }:
 
   // تأثير Gemini - fade in مع وميض مؤقت
   useEffect(() => {
-    if (!response || isLoading) return;
+    if (!response || isLoading) {
+      setIsVisible(false);
+      setIsPulsing(true);
+      return;
+    }
+    
+    // إعادة تعيين الحالة
+    setIsVisible(false);
+    setIsPulsing(true);
+    setShowActions(false);
     
     // إظهار النص مع fade-in
-    setTimeout(() => {
+    const showTimer = setTimeout(() => {
       setIsVisible(true);
-    }, 100);
+    }, 300);
     
     // إيقاف الوميض بعد ثانيتين
-    setTimeout(() => {
+    const pulseTimer = setTimeout(() => {
       setIsPulsing(false);
       setShowActions(true);
-    }, 2000);
+    }, 2500);
+
+    return () => {
+      clearTimeout(showTimer);
+      clearTimeout(pulseTimer);
+    };
   }, [response, isLoading]);
 
   // دالة تحليل الجداول من النص
@@ -169,13 +183,17 @@ const AIResponse = ({ response, model, type, isLoading = false, originalQuery }:
   };
 
   const formatText = (text: string) => {
+    if (!text || typeof text !== 'string') {
+      return <p className="text-muted-foreground">لا توجد استجابة متاحة</p>;
+    }
+
     const tables = parseTablesFromText(text);
     const lines = text.split('\n');
     const elements = [];
     let processedLines = new Set();
 
-    // إضافة الجداول في مواضعها الصحيحة
-    tables.forEach((table, tableIndex) => {
+    // معالجة الجداول
+    tables.forEach((table) => {
       for (let i = table.startIndex; i <= table.endIndex; i++) {
         processedLines.add(i);
       }
@@ -184,79 +202,82 @@ const AIResponse = ({ response, model, type, isLoading = false, originalQuery }:
     let currentTableIndex = 0;
     
     lines.forEach((line, index) => {
-      // إذا كان هذا الخط جزء من جدول
+      // تخطي الأسطر الفارغة أو التي تحتوي على أحرف غريبة فقط
+      if (!line || line.trim() === '' || /^[\s\*\-\_]+$/.test(line.trim())) {
+        return;
+      }
+
+      // إضافة الجداول
       if (processedLines.has(index)) {
-        // إضافة الجدول في بداية أول خط منه فقط
         if (currentTableIndex < tables.length && tables[currentTableIndex].startIndex === index) {
           const table = tables[currentTableIndex];
           elements.push(
-        <div key={`table-${currentTableIndex}`} className="my-8">
-          <div className="p-4 rounded-t-lg bg-gradient-to-r from-primary/10 to-secondary/10 border border-border/50">
-            <div className="flex items-center gap-2">
-              <div className="p-2 rounded-full bg-gradient-to-br from-primary to-secondary">
-                <Sparkles className="w-4 h-4 text-white" />
-              </div>
-              <Badge variant="secondary" className="bg-gradient-to-r from-primary/20 to-secondary/20 border-0">
-                جدول بيانات ذكي
-              </Badge>
+            <div key={`table-${currentTableIndex}`} className="my-6">
+              <AITable 
+                data={{
+                  headers: table.headers,
+                  rows: table.rows,
+                  type: table.type
+                }}
+              />
             </div>
-          </div>
-          <AITable 
-            data={{
-              headers: table.headers,
-              rows: table.rows,
-              type: table.type
-            }}
-            className="rounded-t-none border-t-0"
-          />
-        </div>
           );
           currentTableIndex++;
         }
         return;
       }
 
+      const cleanLine = line.trim();
+      
       // عناوين
-      if (line.startsWith('#')) {
-        const level = line.match(/^#+/)?.[0].length || 1;
-        const title = line.replace(/^#+\s*/, '');
-        elements.push(
-          <div key={`heading-wrapper-${index}`} className="my-6">
-            <div className="flex items-center gap-3 mb-4">
-              <div className="w-1 h-8 bg-gradient-to-b from-primary to-secondary rounded-full"></div>
-              <h2 className={`font-bold bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent ${
+      if (cleanLine.startsWith('#')) {
+        const level = (cleanLine.match(/^#+/) || ['#'])[0].length;
+        const title = cleanLine.replace(/^#+\s*/, '').trim();
+        if (title) {
+          elements.push(
+            <h2 
+              key={`heading-${index}`} 
+              className={`font-bold mb-4 mt-6 bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent ${
                 level === 1 ? 'text-2xl' : level === 2 ? 'text-xl' : 'text-lg'
-              }`}>
-                {title}
-              </h2>
-            </div>
-          </div>
-        );
+              }`}
+            >
+              {title}
+            </h2>
+          );
+        }
       }
       // نقاط
-      else if (line.trim().startsWith('-') || line.trim().startsWith('•')) {
-        elements.push(
-          <div key={`bullet-${index}`} className="flex items-start gap-3 mb-3 p-3 rounded-lg bg-gradient-to-r from-primary/5 to-transparent border-r-2 border-primary/30">
-            <div className="p-1.5 rounded-full bg-gradient-to-br from-primary to-secondary mt-0.5">
-              <Sparkles className="w-3 h-3 text-white" />
+      else if (cleanLine.match(/^[-•*]\s/)) {
+        const content = cleanLine.replace(/^[-•*]\s*/, '').trim();
+        if (content) {
+          elements.push(
+            <div key={`bullet-${index}`} className="flex items-start gap-3 mb-3 p-3 rounded-lg bg-gradient-to-r from-primary/5 to-transparent border-r-2 border-primary/30">
+              <div className="p-1.5 rounded-full bg-gradient-to-br from-primary to-secondary mt-0.5 flex-shrink-0">
+                <Sparkles className="w-3 h-3 text-white" />
+              </div>
+              <span className="leading-relaxed flex-1">{content}</span>
             </div>
-            <span className="leading-relaxed">{line.replace(/^[-•]\s*/, '')}</span>
-          </div>
-        );
+          );
+        }
       }
       // نص عادي
-      else if (line.trim()) {
+      else if (cleanLine && !cleanLine.match(/^[\*\-\_\s]+$/)) {
         elements.push(
-          <p key={`text-${index}`} className="leading-relaxed mb-4 text-justify p-2 rounded-lg hover:bg-primary/5 transition-colors duration-200">
-            {line}
+          <p key={`text-${index}`} className="leading-relaxed mb-4 text-justify">
+            {cleanLine}
           </p>
         );
       }
-      // مساحة فارغة
-      else {
-        elements.push(<div key={`space-${index}`} className="h-2" />);
-      }
     });
+
+    // إذا لم تكن هناك عناصر، أظهر النص الخام
+    if (elements.length === 0) {
+      return (
+        <div className="whitespace-pre-wrap leading-relaxed">
+          {text}
+        </div>
+      );
+    }
 
     return elements;
   };
@@ -384,6 +405,18 @@ const AIResponse = ({ response, model, type, isLoading = false, originalQuery }:
   }
 
   if (!response) return null;
+
+  // التحقق من صحة البيانات
+  if (typeof response !== 'string') {
+    console.error('Invalid response type:', typeof response);
+    return (
+      <Card className="card-glow mt-6 border-red-200">
+        <div className="p-4 text-red-600">
+          خطأ في تنسيق الاستجابة
+        </div>
+      </Card>
+    );
+  }
 
   return (
     <>
