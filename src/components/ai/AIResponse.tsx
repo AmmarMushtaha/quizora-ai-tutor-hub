@@ -190,15 +190,26 @@ const AIResponse = ({ response, model, type, isLoading = false, originalQuery }:
         if (currentTableIndex < tables.length && tables[currentTableIndex].startIndex === index) {
           const table = tables[currentTableIndex];
           elements.push(
-            <div key={`table-${currentTableIndex}`} className="my-6">
-              <AITable 
-                data={{
-                  headers: table.headers,
-                  rows: table.rows,
-                  type: table.type
-                }}
-              />
+        <div key={`table-${currentTableIndex}`} className="my-8">
+          <div className="p-4 rounded-t-lg bg-gradient-to-r from-primary/10 to-secondary/10 border border-border/50">
+            <div className="flex items-center gap-2">
+              <div className="p-2 rounded-full bg-gradient-to-br from-primary to-secondary">
+                <Sparkles className="w-4 h-4 text-white" />
+              </div>
+              <Badge variant="secondary" className="bg-gradient-to-r from-primary/20 to-secondary/20 border-0">
+                جدول بيانات ذكي
+              </Badge>
             </div>
+          </div>
+          <AITable 
+            data={{
+              headers: table.headers,
+              rows: table.rows,
+              type: table.type
+            }}
+            className="rounded-t-none border-t-0"
+          />
+        </div>
           );
           currentTableIndex++;
         }
@@ -210,21 +221,25 @@ const AIResponse = ({ response, model, type, isLoading = false, originalQuery }:
         const level = line.match(/^#+/)?.[0].length || 1;
         const title = line.replace(/^#+\s*/, '');
         elements.push(
-          <h2 
-            key={`heading-${index}`} 
-            className={`font-bold text-gradient mb-4 mt-6 ${
-              level === 1 ? 'text-2xl' : level === 2 ? 'text-xl' : 'text-lg'
-            }`}
-          >
-            {title}
-          </h2>
+          <div key={`heading-wrapper-${index}`} className="my-6">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-1 h-8 bg-gradient-to-b from-primary to-secondary rounded-full"></div>
+              <h2 className={`font-bold bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent ${
+                level === 1 ? 'text-2xl' : level === 2 ? 'text-xl' : 'text-lg'
+              }`}>
+                {title}
+              </h2>
+            </div>
+          </div>
         );
       }
       // نقاط
       else if (line.trim().startsWith('-') || line.trim().startsWith('•')) {
         elements.push(
-          <div key={`bullet-${index}`} className="flex items-start gap-2 mb-2">
-            <Sparkles className="w-4 h-4 text-primary mt-1 flex-shrink-0" />
+          <div key={`bullet-${index}`} className="flex items-start gap-3 mb-3 p-3 rounded-lg bg-gradient-to-r from-primary/5 to-transparent border-r-2 border-primary/30">
+            <div className="p-1.5 rounded-full bg-gradient-to-br from-primary to-secondary mt-0.5">
+              <Sparkles className="w-3 h-3 text-white" />
+            </div>
             <span className="leading-relaxed">{line.replace(/^[-•]\s*/, '')}</span>
           </div>
         );
@@ -232,7 +247,7 @@ const AIResponse = ({ response, model, type, isLoading = false, originalQuery }:
       // نص عادي
       else if (line.trim()) {
         elements.push(
-          <p key={`text-${index}`} className="leading-relaxed mb-4 text-justify">
+          <p key={`text-${index}`} className="leading-relaxed mb-4 text-justify p-2 rounded-lg hover:bg-primary/5 transition-colors duration-200">
             {line}
           </p>
         );
@@ -372,18 +387,23 @@ const AIResponse = ({ response, model, type, isLoading = false, originalQuery }:
 
   return (
     <>
-      <Card className="card-glow mt-6 overflow-hidden">
+      <Card className="card-glow mt-6 overflow-hidden border-0 bg-gradient-to-br from-background via-background to-primary/5">
         {/* Header */}
-        <div className="border-b bg-gradient-to-r from-primary/5 to-secondary/5 p-4">
+        <div className="border-b border-border/50 bg-gradient-to-r from-primary/10 via-primary/5 to-secondary/10 p-4 backdrop-blur-sm">
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              {getTypeIcon()}
-              <Badge variant="secondary" className="gap-1">
-                {getTypeLabel()}
-              </Badge>
-              <Badge variant="outline" className="text-xs">
-                {model}
-              </Badge>
+            <div className="flex items-center gap-3">
+              <div className="p-2 rounded-full bg-primary/10 backdrop-blur-sm">
+                {getTypeIcon()}
+              </div>
+              <div className="flex flex-col gap-1">
+                <Badge variant="secondary" className="gap-2 bg-gradient-to-r from-primary/20 to-secondary/20 border-0">
+                  <Sparkles className="w-3 h-3" />
+                  {getTypeLabel()}
+                </Badge>
+                <Badge variant="outline" className="text-xs border-primary/20 bg-primary/5">
+                  {model}
+                </Badge>
+              </div>
             </div>
             
             {showActions && (
@@ -393,7 +413,7 @@ const AIResponse = ({ response, model, type, isLoading = false, originalQuery }:
                   variant="ghost"
                   size="sm"
                   onClick={() => setFontSize(fontSize === 'normal' ? 'large' : fontSize === 'large' ? 'xlarge' : 'normal')}
-                  className="h-8 w-8 p-0"
+                  className="h-8 w-8 p-0 hover:bg-primary/10 rounded-full"
                 >
                   <Type className="w-4 h-4" />
                 </Button>
@@ -403,7 +423,7 @@ const AIResponse = ({ response, model, type, isLoading = false, originalQuery }:
                   variant="ghost"
                   size="sm"
                   onClick={() => setTheme(theme === 'default' ? 'dark' : theme === 'dark' ? 'warm' : 'default')}
-                  className="h-8 w-8 p-0"
+                  className="h-8 w-8 p-0 hover:bg-primary/10 rounded-full"
                 >
                   <Palette className="w-4 h-4" />
                 </Button>
@@ -413,7 +433,7 @@ const AIResponse = ({ response, model, type, isLoading = false, originalQuery }:
                   variant="ghost"
                   size="sm"
                   onClick={() => setShowFullscreen(true)}
-                  className="h-8 w-8 p-0"
+                  className="h-8 w-8 p-0 hover:bg-primary/10 rounded-full"
                 >
                   <Maximize2 className="w-4 h-4" />
                 </Button>
@@ -435,13 +455,13 @@ const AIResponse = ({ response, model, type, isLoading = false, originalQuery }:
 
           {/* Actions */}
           {showActions && (
-            <div className="border-t p-4 bg-secondary/20">
+            <div className="border-t border-border/50 p-4 bg-gradient-to-r from-secondary/10 to-primary/5 backdrop-blur-sm">
               <div className="flex flex-wrap gap-2">
                 <Button
                   variant="outline"
                   size="sm"
                   onClick={copyToClipboard}
-                  className="gap-2"
+                  className="gap-2 hover:bg-primary/10 border-primary/20 hover:border-primary/40 transition-all duration-200"
                 >
                   {copied ? <Check className="w-4 h-4 text-green-500" /> : <Copy className="w-4 h-4" />}
                   {copied ? 'تم النسخ' : 'نسخ'}
@@ -451,7 +471,7 @@ const AIResponse = ({ response, model, type, isLoading = false, originalQuery }:
                   variant="outline"
                   size="sm"
                   onClick={downloadAsText}
-                  className="gap-2"
+                  className="gap-2 hover:bg-primary/10 border-primary/20 hover:border-primary/40 transition-all duration-200"
                 >
                   <Download className="w-4 h-4" />
                   تحميل
@@ -461,7 +481,7 @@ const AIResponse = ({ response, model, type, isLoading = false, originalQuery }:
                   variant="outline"
                   size="sm"
                   onClick={shareResponse}
-                  className="gap-2"
+                  className="gap-2 hover:bg-primary/10 border-primary/20 hover:border-primary/40 transition-all duration-200"
                 >
                   <Share2 className="w-4 h-4" />
                   مشاركة
@@ -471,7 +491,7 @@ const AIResponse = ({ response, model, type, isLoading = false, originalQuery }:
                   variant="outline"
                   size="sm"
                   onClick={readAloud}
-                  className="gap-2"
+                  className="gap-2 hover:bg-primary/10 border-primary/20 hover:border-primary/40 transition-all duration-200"
                 >
                   {isReading ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
                   {isReading ? 'إيقاف' : 'قراءة'}

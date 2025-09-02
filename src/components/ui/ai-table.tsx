@@ -70,34 +70,40 @@ const AITable = ({ data, className = '' }: AITableProps) => {
   };
 
   return (
-    <Card className={`border border-border/50 shadow-sm ${
+    <Card className={`border border-border/50 shadow-lg overflow-hidden bg-gradient-to-br from-background to-primary/5 ${
       isVisible ? 'animate-fade-in' : 'opacity-0'
     } ${isPulsing ? 'animate-pulse' : ''} ${className}`}>
-      {/* Header مبسط */}
-      <div className="border-b p-3 bg-muted/30">
-        <div className="flex items-center gap-2">
-          <Sparkles className="w-4 h-4 text-primary" />
-          <Badge variant="secondary" className="text-xs">
-            {getTableTypeLabel()}
-          </Badge>
-          {title && (
-            <h3 className="text-sm font-semibold">{title}</h3>
-          )}
+      {/* Header مطور */}
+      <div className="border-b border-border/50 p-4 bg-gradient-to-r from-primary/10 via-primary/5 to-secondary/10 backdrop-blur-sm">
+        <div className="flex items-center gap-3">
+          <div className="p-2 rounded-full bg-gradient-to-br from-primary to-secondary">
+            <Sparkles className="w-4 h-4 text-white" />
+          </div>
+          <div className="flex flex-col gap-1">
+            <Badge variant="secondary" className="text-xs bg-gradient-to-r from-primary/20 to-secondary/20 border-0">
+              {getTableTypeLabel()}
+            </Badge>
+            {title && (
+              <h3 className="text-sm font-semibold bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">{title}</h3>
+            )}
+          </div>
         </div>
       </div>
 
-      {/* Table مبسط */}
+      {/* Table محسن */}
       {isVisible && (
         <div className="overflow-x-auto">
           <Table>
             <TableHeader>
-              <TableRow>
+              <TableRow className="bg-gradient-to-r from-primary/5 to-secondary/5 hover:bg-gradient-to-r hover:from-primary/10 hover:to-secondary/10">
                 {headers.map((header, index) => (
                   <TableHead 
                     key={index} 
-                    className="text-center font-medium text-foreground bg-muted/20 h-10"
+                    className="text-center font-semibold text-foreground h-12 border-r border-border/30 last:border-r-0"
                   >
-                    <FlashText text={header} delay={index * 50} />
+                    <div className="flex items-center justify-center gap-2">
+                      <FlashText text={header} delay={index * 50} />
+                    </div>
                   </TableHead>
                 ))}
               </TableRow>
@@ -107,16 +113,16 @@ const AITable = ({ data, className = '' }: AITableProps) => {
                 <TableRow 
                   key={rowIndex}
                   className={`
-                    transition-opacity duration-300
-                    ${rowIndex % 2 === 0 ? 'bg-muted/10' : ''}
+                    transition-all duration-300 hover:bg-gradient-to-r hover:from-primary/5 hover:to-transparent
+                    ${rowIndex % 2 === 0 ? 'bg-muted/20' : 'bg-background'}
                   `}
                 >
                   {row.map((cell, cellIndex) => (
                     <TableCell 
                       key={cellIndex}
                       className={`
-                        text-center py-3 text-sm
-                        ${cellIndex === 0 ? 'font-medium' : ''}
+                        text-center py-4 text-sm border-r border-border/20 last:border-r-0
+                        ${cellIndex === 0 ? 'font-semibold bg-gradient-to-r from-primary/10 to-transparent' : ''}
                       `}
                     >
                       <FlashText 
@@ -132,11 +138,17 @@ const AITable = ({ data, className = '' }: AITableProps) => {
         </div>
       )}
 
-      {/* Footer مبسط */}
-      <div className="border-t p-2 bg-muted/10">
+      {/* Footer محسن */}
+      <div className="border-t border-border/50 p-3 bg-gradient-to-r from-secondary/10 to-primary/5">
         <div className="flex items-center justify-between text-xs text-muted-foreground">
-          <span>{rows.length} صف</span>
-          <span>{headers.length} عمود</span>
+          <div className="flex items-center gap-2">
+            <div className="w-2 h-2 rounded-full bg-gradient-to-r from-primary to-secondary"></div>
+            <span>{rows.length} صف</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <span>{headers.length} عمود</span>
+            <div className="w-2 h-2 rounded-full bg-gradient-to-r from-secondary to-primary"></div>
+          </div>
         </div>
       </div>
     </Card>
