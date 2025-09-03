@@ -187,6 +187,52 @@ const AIResponse = ({ response, model, type, isLoading = false, originalQuery }:
       return <p className="text-muted-foreground">لا توجد استجابة متاحة</p>;
     }
 
+    // معالجة خاصة للخرائط الذهنية
+    if (type === 'mindmap') {
+      try {
+        // محاولة تحليل النص كـ JSON
+        const jsonData = JSON.parse(text);
+        return (
+          <div className="space-y-4">
+            <div className="bg-gradient-to-r from-primary/10 to-secondary/10 p-4 rounded-lg border border-primary/20">
+              <h3 className="text-lg font-semibold mb-4 text-primary flex items-center gap-2">
+                <MessageSquare className="w-5 h-5" />
+                {jsonData.title || 'خريطة ذهنية'}
+              </h3>
+              {jsonData.branches && jsonData.branches.map((branch: any, index: number) => (
+                <div key={index} className="mb-6 p-4 bg-background/50 rounded-lg border border-border/50">
+                  <h4 className="font-medium text-foreground mb-3 flex items-center gap-2">
+                    <div 
+                      className="w-3 h-3 rounded-full" 
+                      style={{ backgroundColor: branch.color || '#3b82f6' }}
+                    />
+                    {branch.title}
+                  </h4>
+                  {branch.subbranches && branch.subbranches.map((subbranch: any, subIndex: number) => (
+                    <div key={subIndex} className="ml-6 mb-3 p-3 bg-muted/30 rounded border-r-2 border-primary/30">
+                      <p className="font-medium text-sm text-foreground">{subbranch.title}</p>
+                      {subbranch.description && (
+                        <p className="text-sm text-muted-foreground mt-1">{subbranch.description}</p>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              ))}
+            </div>
+          </div>
+        );
+      } catch {
+        // في حالة فشل تحليل JSON، عرض النص كما هو مع تنسيق أفضل
+        return (
+          <div className="bg-gradient-to-r from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800 p-4 rounded-lg border border-border/50">
+            <pre className="whitespace-pre-wrap text-sm font-mono leading-relaxed text-foreground overflow-x-auto">
+              {text}
+            </pre>
+          </div>
+        );
+      }
+    }
+
     const tables = parseTablesFromText(text);
     const lines = text.split('\n');
     const elements = [];
