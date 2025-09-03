@@ -327,7 +327,22 @@ const History = () => {
 
               {/* Overview Tab */}
               <TabsContent value="overview">
-                <HistoryStats conversations={conversations} aiRequests={aiRequests} />
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+                  <Card>
+                    <CardContent className="p-4 text-center">
+                      <MessageCircle className="w-8 h-8 mx-auto mb-2 text-primary" />
+                      <div className="text-2xl font-bold">{conversations.length}</div>
+                      <div className="text-sm text-muted-foreground">محادثة</div>
+                    </CardContent>
+                  </Card>
+                  <Card>
+                    <CardContent className="p-4 text-center">
+                      <Brain className="w-8 h-8 mx-auto mb-2 text-primary" />
+                      <div className="text-2xl font-bold">{aiRequests.length}</div>
+                      <div className="text-sm text-muted-foreground">طلب AI</div>
+                    </CardContent>
+                  </Card>
+                </div>
               </TabsContent>
 
               {/* Conversations Tab */}

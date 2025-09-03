@@ -14,32 +14,44 @@ import {
   User,
   Bot,
   Copy,
-  Share
+  Share,
+  Play
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
+interface ConversationMessage {
+  id: string;
+  message_type: string;
+  content: string;
+  created_at: string;
+  credits_used: number;
+}
+
 interface Conversation {
   id: string;
+  session_id: string;
   title: string;
   total_credits_used: number;
   created_at: string;
   updated_at: string;
-  messages: any[];
+  messages: ConversationMessage[];
+  message_count: number;
 }
 
 interface ConversationCardProps {
   conversation: Conversation;
-  onDelete: (id: string) => Promise<void>;
+  onDelete: (sessionId: string) => Promise<void>;
+  onContinue?: (sessionId: string) => void;
 }
 
-export function ConversationCard({ conversation, onDelete }: ConversationCardProps) {
+export function ConversationCard({ conversation, onDelete, onContinue }: ConversationCardProps) {
   const [isDeleting, setIsDeleting] = useState(false);
   const { toast } = useToast();
 
   const handleDelete = async () => {
     setIsDeleting(true);
     try {
-      await onDelete(conversation.id);
+      await onDelete(conversation.session_id);
     } catch (error) {
       console.error('Error deleting conversation:', error);
     } finally {
@@ -47,9 +59,15 @@ export function ConversationCard({ conversation, onDelete }: ConversationCardPro
     }
   };
 
+  const handleContinue = () => {
+    if (onContinue) {
+      onContinue(conversation.session_id);
+    }
+  };
+
   const copyContent = () => {
     const content = conversation.messages
-      .map(msg => `${msg.role === 'user' ? 'المستخدم' : 'الذكاء الاصطناعي'}: ${msg.content}`)
+      .map(msg => `${msg.message_type === 'user' ? 'المستخدم' : 'الذكاء الاصطناعي'}: ${msg.content}`)
       .join('\n\n');
     
     navigator.clipboard.writeText(content);
@@ -93,7 +111,7 @@ export function ConversationCard({ conversation, onDelete }: ConversationCardPro
               
               <div className="flex items-center gap-1.5">
                 <MessageCircle className="w-4 h-4 text-blue-500" />
-                <span>{conversation.messages.length} رسالة</span>
+                <span>{conversation.message_count} رسالة</span>
               </div>
               
               <Badge variant="secondary" className="gap-1.5">
@@ -104,6 +122,17 @@ export function ConversationCard({ conversation, onDelete }: ConversationCardPro
           </div>
           
           <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+            {onContinue && (
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={handleContinue}
+                className="hover:bg-primary/10 hover:text-primary"
+              >
+                <Play className="w-4 h-4" />
+              </Button>
+            )}
+
             <Dialog>
               <DialogTrigger asChild>
                 <Button variant="outline" size="sm" className="hover:bg-primary/10">
@@ -124,22 +153,22 @@ export function ConversationCard({ conversation, onDelete }: ConversationCardPro
                       <div
                         key={index}
                         className={`flex gap-3 ${
-                          message.role === 'user' ? 'justify-end' : 'justify-start'
+                          message.message_type === 'user' ? 'justify-end' : 'justify-start'
                         }`}
                       >
                         <div className={`flex gap-3 max-w-[80%] ${
-                          message.role === 'user' ? 'flex-row-reverse' : 'flex-row'
+                          message.message_type === 'user' ? 'flex-row-reverse' : 'flex-row'
                         }`}>
                           <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
-                            message.role === 'user' 
+                            message.message_type === 'user' 
                               ? 'bg-primary text-primary-foreground' 
                               : 'bg-accent text-accent-foreground'
                           }`}>
-                            {message.role === 'user' ? <User className="w-4 h-4" /> : <Bot className="w-4 h-4" />}
+                            {message.message_type === 'user' ? <User className="w-4 h-4" /> : <Bot className="w-4 h-4" />}
                           </div>
                           
                           <div className={`p-4 rounded-xl ${
-                            message.role === 'user'
+                            message.message_type === 'user'
                               ? 'bg-primary text-primary-foreground'
                               : 'bg-muted'
                           }`}>
@@ -156,10 +185,12 @@ export function ConversationCard({ conversation, onDelete }: ConversationCardPro
                     <Copy className="w-4 h-4 mr-2" />
                     نسخ المحادثة
                   </Button>
-                  <Button variant="outline" className="flex-1">
-                    <Share className="w-4 h-4 mr-2" />
-                    مشاركة
-                  </Button>
+                  {onContinue && (
+                    <Button onClick={handleContinue} className="flex-1">
+                      <Play className="w-4 h-4 mr-2" />
+                      استكمال المحادثة
+                    </Button>
+                  )}
                 </div>
               </DialogContent>
             </Dialog>
