@@ -90,10 +90,11 @@ const History = () => {
           const sessionId = message.session_id;
           
           if (!conversationMap.has(sessionId)) {
+            // Initialize conversation with the first message
             conversationMap.set(sessionId, {
               id: message.id,
               session_id: sessionId,
-              title: message.content.slice(0, 50) + (message.content.length > 50 ? '...' : ''),
+              title: "",
               total_credits_used: 0,
               created_at: message.created_at,
               updated_at: message.created_at,
@@ -111,14 +112,33 @@ const History = () => {
           if (new Date(message.created_at) > new Date(conversation.updated_at)) {
             conversation.updated_at = message.created_at;
           }
-          
-          // Update title to be the first user message
-          if (message.message_type === 'user' && conversation.messages.length === 1) {
-            conversation.title = message.content.slice(0, 60) + (message.content.length > 60 ? '...' : '');
-          }
         });
         
-        setConversations(Array.from(conversationMap.values()));
+        // Set titles and sort messages for each conversation
+        const conversations = Array.from(conversationMap.values()).map(conversation => {
+          // Sort messages by creation time
+          conversation.messages.sort((a: any, b: any) => 
+            new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
+          );
+          
+          // Set title based on first user message
+          const firstUserMessage = conversation.messages.find((msg: any) => msg.message_type === 'user');
+          if (firstUserMessage) {
+            conversation.title = firstUserMessage.content.slice(0, 60) + 
+              (firstUserMessage.content.length > 60 ? '...' : '');
+          } else {
+            conversation.title = "محادثة جديدة";
+          }
+          
+          return conversation;
+        });
+        
+        // Sort conversations by updated_at descending
+        conversations.sort((a, b) => 
+          new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime()
+        );
+        
+        setConversations(conversations);
       }
 
       // Load AI requests
@@ -195,7 +215,8 @@ const History = () => {
 
     // Filter conversations
     const filteredConversations = conversations.filter(conv => {
-      const matchesSearch = conv.title.toLowerCase().includes(searchTerm.toLowerCase());
+      const matchesSearch = conv.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        conv.messages.some((msg: any) => msg.content.toLowerCase().includes(searchTerm.toLowerCase()));
       const matchesDate = filterByDate(conv.updated_at);
       return matchesSearch && matchesDate;
     });
@@ -222,7 +243,7 @@ const History = () => {
           comparison = a.total_credits_used - b.total_credits_used;
           break;
         case 'messages':
-          comparison = a.messages.length - b.messages.length;
+          comparison = a.message_count - b.message_count;
           break;
         case 'title':
           comparison = a.title.localeCompare(b.title, 'ar');

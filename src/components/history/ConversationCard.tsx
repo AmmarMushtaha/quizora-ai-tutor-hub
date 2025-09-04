@@ -212,7 +212,9 @@ export function ConversationCard({ conversation, onDelete, onContinue }: Convers
         <CardContent className="pt-0">
           <div className="text-sm text-muted-foreground bg-muted/30 p-3 rounded-lg">
             <p className="line-clamp-2">
-              {conversation.messages[conversation.messages.length - 1]?.content || 'لا يوجد محتوى'}
+              <span className="font-medium">آخر رسالة:</span>{" "}
+              {conversation.messages[conversation.messages.length - 1]?.content?.slice(0, 150) + 
+               (conversation.messages[conversation.messages.length - 1]?.content?.length > 150 ? '...' : '') || 'لا يوجد محتوى'}
             </p>
           </div>
         </CardContent>
