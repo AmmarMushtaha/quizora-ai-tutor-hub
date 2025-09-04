@@ -4,6 +4,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import AIResponse from "@/components/ai/AIResponse";
 import { 
   MessageCircle, 
   Calendar, 
@@ -172,7 +173,15 @@ export function ConversationCard({ conversation, onDelete, onContinue }: Convers
                               ? 'bg-primary text-primary-foreground'
                               : 'bg-muted'
                           }`}>
-                            <p className="whitespace-pre-wrap">{message.content}</p>
+                            {message.message_type === 'assistant' ? (
+                              <AIResponse 
+                                response={message.content} 
+                                model="gemini" 
+                                type="text"
+                              />
+                            ) : (
+                              <p className="whitespace-pre-wrap">{message.content}</p>
+                            )}
                           </div>
                         </div>
                       </div>
