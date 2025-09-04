@@ -21,7 +21,7 @@ import {
   Menu,
   Crown
 } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { useProfile } from '@/hooks/useProfile';
 import { AppSidebar } from '@/components/AppSidebar';
@@ -40,12 +40,25 @@ const Dashboard = () => {
   const { user } = useAuth();
   const { profile, isLoading, error, refreshCredits } = useProfile();
   const navigate = useNavigate();
+  const location = useLocation();
+  
+  // Check for session ID from navigation state or URL params
+  const sessionId = location.state?.sessionId || new URLSearchParams(location.search).get('sessionId');
+  const [activeTab, setActiveTab] = React.useState(sessionId ? 'workspace' : 'workspace');
+  const [activeComponent, setActiveComponent] = React.useState(sessionId ? 'chat-tutor' : null);
 
   React.useEffect(() => {
     if (!user) {
       navigate('/auth');
     }
   }, [user, navigate]);
+
+  React.useEffect(() => {
+    if (sessionId) {
+      setActiveTab('workspace');
+      setActiveComponent('chat-tutor');
+    }
+  }, [sessionId]);
 
   if (error) {
     return (
@@ -263,7 +276,7 @@ const Dashboard = () => {
               </p>
             </div>
 
-            <Tabs defaultValue="workspace" className="w-full">
+            <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
               <TabsList className="grid w-full grid-cols-2">
                 <TabsTrigger value="tools">نظرة عامة</TabsTrigger>
                 <TabsTrigger value="workspace">مساحة العمل</TabsTrigger>
@@ -391,7 +404,7 @@ const Dashboard = () => {
                   <p className="text-sm md:text-base text-muted-foreground">اختر الأداة التي تريد استخدامها</p>
                 </div>
                 
-                <Tabs defaultValue="text-question" className="w-full">
+                <Tabs value={activeComponent || "text-question"} onValueChange={setActiveComponent} className="w-full">
                   <div className="mb-4 md:mb-6">
                     <TabsList className="grid w-full grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-1 md:gap-2 h-auto bg-muted/30 p-1 md:p-2">
                       {aiFeatures.map((feature) => (
@@ -429,7 +442,11 @@ const Dashboard = () => {
                               <span className="mr-2">جاري التحميل...</span>
                             </div>
                           }>
-                            <feature.component />
+                            {feature.id === 'chat-tutor' && sessionId ? (
+                              <feature.component sessionId={sessionId} />
+                            ) : (
+                              <feature.component />
+                            )}
                           </React.Suspense>
                         </div>
                       ) : (

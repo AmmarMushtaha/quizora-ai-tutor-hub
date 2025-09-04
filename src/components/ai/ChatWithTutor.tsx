@@ -31,13 +31,17 @@ interface Message {
   creditsUsed?: number;
 }
 
-const ChatWithTutor = () => {
+interface ChatWithTutorProps {
+  sessionId?: string;
+}
+
+const ChatWithTutor = ({ sessionId: providedSessionId }: ChatWithTutorProps) => {
   const { user } = useAuth();
   const { profile, refreshCredits } = useProfile();
   const [messages, setMessages] = useState<Message[]>([]);
   const [currentMessage, setCurrentMessage] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const [sessionId] = useState(() => uuidv4());
+  const [sessionId] = useState(() => providedSessionId || uuidv4());
   const [answerType, setAnswerType] = useState<'concise' | 'detailed'>('detailed');
   const messagesEndRef = useRef<HTMLDivElement>(null);
 

@@ -25,11 +25,13 @@ import { useProfile } from "@/hooks/useProfile";
 
 interface Conversation {
   id: string;
+  session_id: string;
   title: string;
   total_credits_used: number;
   created_at: string;
   updated_at: string;
   messages: any[];
+  message_count: number;
 }
 
 interface AIRequest {
@@ -73,14 +75,51 @@ const History = () => {
         return;
       }
 
-      // Load conversations
+      // Load conversation messages grouped by session_id
       const { data: conversationsData } = await supabase
         .from("conversation_history")
         .select("*")
         .eq("user_id", session.user.id)
-        .order("updated_at", { ascending: false });
+        .order("created_at", { ascending: false });
 
-      if (conversationsData) setConversations(conversationsData as any);
+      if (conversationsData) {
+        // Group messages by session_id to create conversations
+        const conversationMap = new Map<string, any>();
+        
+        conversationsData.forEach((message: any) => {
+          const sessionId = message.session_id;
+          
+          if (!conversationMap.has(sessionId)) {
+            conversationMap.set(sessionId, {
+              id: message.id,
+              session_id: sessionId,
+              title: message.content.slice(0, 50) + (message.content.length > 50 ? '...' : ''),
+              total_credits_used: 0,
+              created_at: message.created_at,
+              updated_at: message.created_at,
+              messages: [],
+              message_count: 0
+            });
+          }
+          
+          const conversation = conversationMap.get(sessionId);
+          conversation.messages.push(message);
+          conversation.message_count++;
+          conversation.total_credits_used += message.credits_used || 0;
+          
+          // Update the latest timestamp
+          if (new Date(message.created_at) > new Date(conversation.updated_at)) {
+            conversation.updated_at = message.created_at;
+          }
+          
+          // Update title to be the first user message
+          if (message.message_type === 'user' && conversation.messages.length === 1) {
+            conversation.title = message.content.slice(0, 60) + (message.content.length > 60 ? '...' : '');
+          }
+        });
+        
+        setConversations(Array.from(conversationMap.values()));
+      }
 
       // Load AI requests
       const { data: requestsData } = await supabase
@@ -103,16 +142,16 @@ const History = () => {
     }
   };
 
-  const deleteConversation = async (conversationId: string) => {
+  const deleteConversation = async (sessionId: string) => {
     try {
       const { error } = await supabase
         .from("conversation_history")
         .delete()
-        .eq("id", conversationId);
+        .eq("session_id", sessionId);
 
       if (error) throw error;
 
-      setConversations(conversations.filter(conv => conv.id !== conversationId));
+      setConversations(conversations.filter(conv => conv.session_id !== sessionId));
       
       toast({
         title: "تم الحذف",
@@ -125,6 +164,10 @@ const History = () => {
         variant: "destructive",
       });
     }
+  };
+
+  const continueConversation = (sessionId: string) => {
+    navigate("/dashboard", { state: { sessionId } });
   };
 
   // Enhanced filtering and sorting logic
@@ -375,9 +418,10 @@ const History = () => {
                   <div className="grid grid-cols-1 gap-6">
                     {filteredAndSortedData.conversations.map((conversation) => (
                       <ConversationCard
-                        key={conversation.id}
+                        key={conversation.session_id}
                         conversation={conversation}
                         onDelete={deleteConversation}
+                        onContinue={continueConversation}
                       />
                     ))}
                   </div>
