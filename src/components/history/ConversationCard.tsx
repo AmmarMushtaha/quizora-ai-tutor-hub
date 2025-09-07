@@ -178,12 +178,23 @@ export function ConversationCard({ conversation, onDelete, onContinue }: Convers
                                 response={message.content} 
                                 model="gemini" 
                                 type={(() => {
-                                  // كشف نوع المحتوى بناءً على المحتوى
-                                  if (message.content.includes('"branches"') && message.content.includes('"title"')) {
+                                  // كشف أكثر دقة لنوع المحتوى
+                                  const content = message.content.toLowerCase();
+                                  
+                                  // كشف الخرائط الذهنية بناءً على هيكل JSON
+                                  if ((content.includes('"branches"') || content.includes('"branch"')) && 
+                                      (content.includes('"title"') || content.includes('"name"'))) {
                                     return "mindmap";
                                   }
+                                  
+                                  // كشف الجداول - سيتم معالجتها كنص
+                                  if (content.includes('|') && content.includes('---')) {
+                                    return "text";
+                                  }
+                                  
                                   return "text";
                                 })()}
+                                isLoading={false}
                               />
                             ) : (
                               <p className="whitespace-pre-wrap">{message.content}</p>
