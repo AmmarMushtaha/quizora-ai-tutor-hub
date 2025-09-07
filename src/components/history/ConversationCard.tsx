@@ -177,7 +177,13 @@ export function ConversationCard({ conversation, onDelete, onContinue }: Convers
                               <AIResponse 
                                 response={message.content} 
                                 model="gemini" 
-                                type={message.content.includes('"branches"') || message.content.includes('"title"') ? "mindmap" : "text"}
+                                type={(() => {
+                                  // كشف نوع المحتوى بناءً على المحتوى
+                                  if (message.content.includes('"branches"') && message.content.includes('"title"')) {
+                                    return "mindmap";
+                                  }
+                                  return "text";
+                                })()}
                               />
                             ) : (
                               <p className="whitespace-pre-wrap">{message.content}</p>
