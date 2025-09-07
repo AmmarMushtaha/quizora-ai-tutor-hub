@@ -177,7 +177,7 @@ export function ConversationCard({ conversation, onDelete, onContinue }: Convers
                               <AIResponse 
                                 response={message.content} 
                                 model="gemini" 
-                                type="text"
+                                type={message.content.includes('"branches"') || message.content.includes('"title"') ? "mindmap" : "text"}
                               />
                             ) : (
                               <p className="whitespace-pre-wrap">{message.content}</p>
