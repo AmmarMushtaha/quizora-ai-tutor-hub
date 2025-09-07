@@ -19,7 +19,8 @@ import {
   LogOut,
   BookOpen,
   Menu,
-  Crown
+  Crown,
+  Book
 } from 'lucide-react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
@@ -35,6 +36,7 @@ const MindMap = React.lazy(() => import('@/components/ai/MindMap'));
 const ResearchPaper = React.lazy(() => import('@/components/ai/ResearchPaper'));
 const TextEditing = React.lazy(() => import('@/components/ai/TextEditing'));
 const ChatWithTutor = React.lazy(() => import('@/components/ai/ChatWithTutor'));
+const BookCreator = React.lazy(() => import('@/components/ai/BookCreator'));
 
 const Dashboard = () => {
   const { user } = useAuth();
@@ -120,6 +122,15 @@ const Dashboard = () => {
       credits: 50,
       gradient: 'from-red-500 to-red-600',
       component: ResearchPaper
+    },
+    {
+      id: 'book-creator',
+      icon: Book,
+      title: 'إنشاء كتاب احترافي',
+      description: 'أنشئ كتاباً كاملاً مع فهرس وصفحات منظمة',
+      credits: 30,
+      gradient: 'from-purple-500 to-purple-600',
+      component: BookCreator
     },
     {
       id: 'text-editing',
@@ -425,7 +436,7 @@ const Dashboard = () => {
                                 : 'bg-destructive/10 text-destructive border-destructive/20'
                             }`}
                           >
-                            {feature.credits}
+                             {feature.id === 'book-creator' ? '3/صفحة' : feature.credits}
                           </Badge>
                         </TabsTrigger>
                       ))}
@@ -434,7 +445,7 @@ const Dashboard = () => {
                   
                   {aiFeatures.map((feature) => (
                     <TabsContent key={feature.id} value={feature.id} className="mt-6">
-                      {profile && profile.credits >= feature.credits ? (
+                      {profile && (feature.id === 'book-creator' ? profile.credits >= 9 : profile.credits >= feature.credits) ? (
                         <div className="bg-card/50 backdrop-blur-sm border border-border/50 rounded-2xl p-6">
                           <React.Suspense fallback={
                             <div className="flex items-center justify-center py-8">
@@ -457,10 +468,19 @@ const Dashboard = () => {
                               <div className="absolute inset-0 w-20 h-20 bg-destructive/10 rounded-full animate-pulse mx-auto"></div>
                             </div>
                             <h3 className="text-2xl font-bold mb-3 text-destructive">نقاط غير كافية</h3>
-                            <p className="text-muted-foreground mb-6 text-lg max-w-md mx-auto">
-                              تحتاج إلى <span className="font-bold text-primary">{feature.credits} نقطة</span> لاستخدام هذه الأداة.
-                              رصيدك الحالي: <span className="font-bold">{profile?.credits || 0} نقطة</span>
-                            </p>
+                             <p className="text-muted-foreground mb-6 text-lg max-w-md mx-auto">
+                               {feature.id === 'book-creator' ? (
+                                 <>
+                                   تحتاج إلى <span className="font-bold text-primary">3 نقاط لكل صفحة</span> لإنشاء كتاب.
+                                   رصيدك الحالي: <span className="font-bold">{profile?.credits || 0} نقطة</span>
+                                 </>
+                               ) : (
+                                 <>
+                                   تحتاج إلى <span className="font-bold text-primary">{feature.credits} نقطة</span> لاستخدام هذه الأداة.
+                                   رصيدك الحالي: <span className="font-bold">{profile?.credits || 0} نقطة</span>
+                                 </>
+                               )}
+                             </p>
                             <div className="flex flex-col sm:flex-row gap-3 justify-center">
                               <Button 
                                 className="bg-gradient-to-r from-primary to-accent hover:from-primary/90 hover:to-accent/90"
