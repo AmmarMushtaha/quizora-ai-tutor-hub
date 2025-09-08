@@ -77,7 +77,16 @@ const BookCreator = () => {
         }
       });
 
-      if (tocError) throw tocError;
+      if (tocError) {
+        console.error('Function error:', tocError);
+        
+        // Check if it's a retryable error
+        if (tocData?.code === 'SERVICE_OVERLOADED' || tocData?.code === 'QUOTA_EXCEEDED') {
+          throw new Error(tocData.error + ' ⏰');
+        }
+        
+        throw new Error(tocData?.error || tocError.message);
+      }
 
       const tableOfContents = tocData.tableOfContents;
       
@@ -101,7 +110,16 @@ const BookCreator = () => {
           }
         });
 
-        if (pageError) throw pageError;
+        if (pageError) {
+          console.error('Function error for chapter:', chapter.title, pageError);
+          
+          // Check if it's a retryable error
+          if (pageData?.code === 'SERVICE_OVERLOADED' || pageData?.code === 'QUOTA_EXCEEDED') {
+            throw new Error(pageData.error + ' ⏰');
+          }
+          
+          throw new Error(pageData?.error || pageError.message);
+        }
 
         pages.push({
           pageNumber: chapter.page,
@@ -142,9 +160,21 @@ const BookCreator = () => {
 
     } catch (error) {
       console.error('Error generating book:', error);
+      
+      let errorMessage = "فشل في إنشاء الكتاب. الرجاء المحاولة مرة أخرى";
+      
+      // Handle specific error types
+      if (error.message.includes('⏰')) {
+        errorMessage = error.message.replace(' ⏰', '');
+      } else if (error.message.includes('overloaded') || error.message.includes('busy')) {
+        errorMessage = "الخدمة مشغولة حالياً، يرجى المحاولة مرة أخرى خلال دقائق قليلة";
+      } else if (error.message.includes('quota')) {
+        errorMessage = "تم تجاوز الحد المسموح للاستخدام، يرجى المحاولة لاحقاً";
+      }
+      
       toast({
         title: "خطأ",
-        description: "فشل في إنشاء الكتاب. الرجاء المحاولة مرة أخرى",
+        description: errorMessage,
         variant: "destructive"
       });
     } finally {

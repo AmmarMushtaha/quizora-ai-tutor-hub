@@ -192,6 +192,35 @@ Write only the content in English without additional headings or formatting.
     
     if (!response.ok) {
       console.error('Gemini API Error:', data);
+      
+      // Handle specific error cases
+      if (data.error?.code === 503 || data.error?.message?.includes('overloaded')) {
+        return new Response(JSON.stringify({ 
+          error: language === 'arabic' ? 
+            'الخدمة مشغولة حالياً، يرجى المحاولة مرة أخرى خلال دقائق قليلة' :
+            'Service is currently busy, please try again in a few minutes',
+          code: 'SERVICE_OVERLOADED',
+          retryable: true
+        }), {
+          status: 503,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+      
+      // Handle quota exceeded
+      if (data.error?.code === 429 || data.error?.message?.includes('quota')) {
+        return new Response(JSON.stringify({ 
+          error: language === 'arabic' ? 
+            'تم تجاوز الحد المسموح للاستخدام، يرجى المحاولة لاحقاً' :
+            'Usage quota exceeded, please try again later',
+          code: 'QUOTA_EXCEEDED',
+          retryable: true
+        }), {
+          status: 429,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+      
       throw new Error(`Gemini API error: ${data.error?.message || 'Unknown error'}`);
     }
 
@@ -252,9 +281,20 @@ Write only the content in English without additional headings or formatting.
 
   } catch (error) {
     console.error('Error in gemini-book-creator function:', error);
+    
+    // Determine language from request for error messages
+    let errorLanguage = 'english';
+    try {
+      const body = await req.json();
+      errorLanguage = body.language || 'english';
+    } catch {}
+    
     return new Response(JSON.stringify({ 
-      error: error.message,
-      details: 'An error occurred while generating book content'
+      error: errorLanguage === 'arabic' ? 
+        'حدث خطأ أثناء إنشاء الكتاب، يرجى المحاولة مرة أخرى' :
+        'An error occurred while generating the book, please try again',
+      details: error.message,
+      code: 'GENERATION_ERROR'
     }), {
       status: 500,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
