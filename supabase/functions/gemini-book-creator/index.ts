@@ -11,6 +11,50 @@ interface TableOfContentsItem {
   title: string;
 }
 
+// Retry function for API calls
+const retryApiCall = async (apiCall: () => Promise<Response>, maxRetries = 3, delayMs = 2000): Promise<Response> => {
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    try {
+      const response = await apiCall();
+      
+      // If successful, return immediately
+      if (response.ok) {
+        return response;
+      }
+      
+      // Check if it's a retryable error
+      const responseClone = response.clone();
+      try {
+        const data = await responseClone.json();
+        
+        // Don't retry for authentication/permission errors
+        if (response.status === 400 || response.status === 401 || response.status === 403) {
+          return response;
+        }
+      } catch (e) {
+        // If we can't parse the response, still retry for 5xx errors
+      }
+      
+      // Retry for server errors (5xx) and rate limits (429, 503)
+      if (attempt === maxRetries) {
+        return response;
+      }
+      
+      console.log(`API call attempt ${attempt} failed (status: ${response.status}), retrying in ${delayMs}ms...`);
+      await new Promise(resolve => setTimeout(resolve, delayMs));
+      
+    } catch (error) {
+      if (attempt === maxRetries) {
+        throw error;
+      }
+      console.log(`API call attempt ${attempt} failed with error: ${error.message}, retrying in ${delayMs}ms...`);
+      await new Promise(resolve => setTimeout(resolve, delayMs));
+    }
+  }
+  
+  throw new Error('Max retries exceeded');
+};
+
 serve(async (req) => {
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
@@ -161,31 +205,37 @@ Write only the content in English without additional headings or formatting.
 `;
     }
 
-    const response = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=${apiKey}`,
-      {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          contents: [
-            {
-              parts: [
-                {
-                  text: prompt
-                }
-              ]
+    console.log(`Making API call for action: ${action}`);
+    
+    const response = await retryApiCall(() => 
+      fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=${apiKey}`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            contents: [
+              {
+                parts: [
+                  {
+                    text: prompt
+                  }
+                ]
+              }
+            ],
+            generationConfig: {
+              temperature: 0.7,
+              topK: 40,
+              topP: 0.95,
+              maxOutputTokens: 8192,
             }
-          ],
-          generationConfig: {
-            temperature: 0.7,
-            topK: 40,
-            topP: 0.95,
-            maxOutputTokens: 8192,
-          }
-        }),
-      }
+          }),
+        }
+      ),
+      3, // max retries
+      3000 // delay between retries (3 seconds)
     );
 
     const data = await response.json();

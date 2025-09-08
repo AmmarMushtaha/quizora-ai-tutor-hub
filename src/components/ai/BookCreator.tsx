@@ -90,12 +90,17 @@ const BookCreator = () => {
 
       const tableOfContents = tocData.tableOfContents;
       
-      // Generate pages content
+      // Generate pages content with better progress tracking
       const pages: BookPage[] = [];
       
       for (let i = 0; i < tableOfContents.length; i++) {
         const chapter = tableOfContents[i];
-        setGenerationProgress(`إنشاء ${chapter.title} (${i + 1}/${tableOfContents.length})...`);
+        setGenerationProgress(`إنشاء الفصل ${i + 1} من ${tableOfContents.length}: ${chapter.title}...`);
+        
+        // Add small delay between requests to avoid rate limiting
+        if (i > 0) {
+          await new Promise(resolve => setTimeout(resolve, 1000));
+        }
         
         const { data: pageData, error: pageError } = await supabase.functions.invoke('gemini-book-creator', {
           body: {
@@ -113,12 +118,18 @@ const BookCreator = () => {
         if (pageError) {
           console.error('Function error for chapter:', chapter.title, pageError);
           
-          // Check if it's a retryable error
+          // Check if it's a retryable error from response data
           if (pageData?.code === 'SERVICE_OVERLOADED' || pageData?.code === 'QUOTA_EXCEEDED') {
             throw new Error(pageData.error + ' ⏰');
           }
           
-          throw new Error(pageData?.error || pageError.message);
+          // Check error message for retryable conditions
+          const errorMsg = pageData?.error || pageError.message || '';
+          if (errorMsg.includes('overloaded') || errorMsg.includes('busy') || errorMsg.includes('503')) {
+            throw new Error('الخدمة مشغولة حالياً، يرجى المحاولة مرة أخرى خلال دقائق قليلة ⏰');
+          }
+          
+          throw new Error(errorMsg || 'خطأ في إنشاء محتوى الفصل');
         }
 
         pages.push({
