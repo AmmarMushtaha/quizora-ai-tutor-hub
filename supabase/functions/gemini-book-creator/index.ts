@@ -30,47 +30,83 @@ serve(async (req) => {
     if (action === 'generate_toc') {
       // Generate table of contents
       prompt = `
-أنت كاتب محترف متخصص في إنشاء الكتب. أريدك أن تنشئ فهرساً احترافياً ومنظماً لكتاب.
+${language === 'arabic' ? `
+أنت كاتب محترف متخصص في إنشاء الكتب باللغة العربية. أريدك أن تنشئ فهرساً احترافياً ومنظماً لكتاب.
 
 معلومات الكتاب:
 - العنوان: ${bookTitle}
 - الموضوع: ${topic}
 - عدد الصفحات المطلوب: ${pageCount}
 - المؤلف: ${authorName}
-- اللغة: ${language === 'arabic' ? 'العربية' : 'الإنجليزية'}
 
-اكتب فهرساً مفصلاً وشاملاً للكتاب يغطي الموضوع بشكل كامل ومنطقي. يجب أن يحتوي الفهرس على:
-1. مقدمة
-2. فصول رئيسية تغطي جميع جوانب الموضوع
-3. خاتمة
-4. مراجع (إذا لزم الأمر)
+اكتب فهرساً مفصلاً وشاملاً للكتاب باللغة العربية يغطي الموضوع بشكل كامل ومنطقي.
 
-قم بتوزيع الفصول على ${pageCount} صفحة بشكل متوازن ومنطقي.
+قم بإنشاء ${Math.ceil(pageCount / 3)} فصول رئيسية موزعة على ${pageCount} صفحة بحيث:
+- الفصل الأول يبدأ من الصفحة 1
+- كل فصل يأخذ حوالي 2-4 صفحات حسب عدد الصفحات الإجمالي
+- الفصل الأخير ينتهي في الصفحة ${pageCount}
 
 أعطني النتيجة في هذا التنسيق JSON بالضبط:
 {
   "tableOfContents": [
     {
       "page": 1,
-      "title": "عنوان الفصل الأول"
+      "title": "مقدمة الكتاب"
     },
     {
       "page": 3,
-      "title": "عنوان الفصل الثاني"
+      "title": "الفصل الأول: [عنوان الفصل]"
     }
   ]
 }
 
 تأكد من أن:
+- جميع العناوين باللغة العربية
 - العناوين مناسبة ومعبرة عن محتوى الفصل
-- التوزيع متوازن على عدد الصفحات المحدد
-- الترتيب منطقي ومتدرج
-- يغطي جميع جوانب الموضوع المطلوب
+- التوزيع دقيق على ${pageCount} صفحة تماماً
+- الترتيب منطقي ومتدرج من البسيط للمعقد
+` : `
+You are a professional writer specializing in creating books in English. Create a professional and organized table of contents for a book.
+
+Book Information:
+- Title: ${bookTitle}
+- Topic: ${topic}
+- Required Pages: ${pageCount}
+- Author: ${authorName}
+
+Write a detailed and comprehensive table of contents in English that covers the topic completely and logically.
+
+Create ${Math.ceil(pageCount / 3)} main chapters distributed across ${pageCount} pages where:
+- First chapter starts at page 1
+- Each chapter takes about 2-4 pages based on total page count
+- Last chapter ends at page ${pageCount}
+
+Provide the result in this exact JSON format:
+{
+  "tableOfContents": [
+    {
+      "page": 1,
+      "title": "Introduction"
+    },
+    {
+      "page": 3,
+      "title": "Chapter 1: [Chapter Title]"
+    }
+  ]
+}
+
+Make sure that:
+- All titles are in English
+- Titles are appropriate and expressive of chapter content
+- Distribution is exact across ${pageCount} pages
+- Logical order from simple to complex
+`}
 `;
     } else if (action === 'generate_page') {
       // Generate content for a specific chapter
       prompt = `
-أنت كاتب محترف متخصص في كتابة المحتوى التعليمي والثقافي.
+${language === 'arabic' ? `
+أنت كاتب محترف متخصص في كتابة المحتوى التعليمي والثقافي باللغة العربية.
 
 معلومات الكتاب:
 - عنوان الكتاب: ${bookTitle}
@@ -78,23 +114,50 @@ serve(async (req) => {
 - عنوان الفصل: ${chapterTitle}
 - رقم الفصل: ${chapterNumber} من ${totalChapters}
 - المؤلف: ${authorName}
-- اللغة: ${language === 'arabic' ? 'العربية' : 'الإنجليزية'}
 
-اكتب محتوى شاملاً ومفصلاً لهذا الفصل. يجب أن يكون المحتوى:
-1. احترافياً ومنظماً
-2. مفصلاً وشاملاً (حوالي 800-1200 كلمة)
-3. تعليمياً ومفيداً
+اكتب محتوى شاملاً ومفصلاً لهذا الفصل باللغة العربية الفصحى. يجب أن يكون المحتوى:
+1. احترافياً ومنظماً بأسلوب أكاديمي
+2. مفصلاً وشاملاً (حوالي 1000-1500 كلمة عربية)
+3. تعليمياً ومفيداً للقارئ العربي
 4. متدرجاً من البسيط إلى المعقد
-5. يحتوي على أمثلة عملية إذا كان ذلك مناسباً
-6. مكتوباً بأسلوب جذاب وواضح
+5. يحتوي على أمثلة عملية من البيئة العربية
+6. مكتوباً بأسلوب جذاب وواضح باللغة العربية
 
 تأكد من أن المحتوى:
+- باللغة العربية الفصحى بدون أي كلمات إنجليزية
 - يتناسب مع عنوان الفصل
-- يربط بين المفاهيم والأفكار
-- يقدم قيمة حقيقية للقارئ
+- يربط بين المفاهيم والأفكار بأسلوب عربي
+- يقدم قيمة حقيقية للقارئ العربي
 - مكتوب بطريقة سهلة الفهم
 
-اكتب المحتوى فقط دون إضافة عناوين جانبية أو تنسيقات إضافية.
+اكتب المحتوى فقط باللغة العربية دون إضافة عناوين جانبية أو تنسيقات إضافية.
+` : `
+You are a professional writer specializing in educational and cultural content in English.
+
+Book Information:
+- Book Title: ${bookTitle}
+- General Topic: ${topic}
+- Chapter Title: ${chapterTitle}
+- Chapter Number: ${chapterNumber} of ${totalChapters}
+- Author: ${authorName}
+
+Write comprehensive and detailed content for this chapter in English. The content should be:
+1. Professional and organized in academic style
+2. Detailed and comprehensive (about 1000-1500 English words)
+3. Educational and useful for English readers
+4. Progressive from simple to complex
+5. Contains practical examples from English context
+6. Written in engaging and clear English style
+
+Make sure the content:
+- Is in clear English without any Arabic words
+- Matches the chapter title
+- Connects concepts and ideas in English style
+- Provides real value for English readers
+- Written in an easy-to-understand manner
+
+Write only the content in English without additional headings or formatting.
+`}
 `;
     }
 
@@ -157,13 +220,16 @@ serve(async (req) => {
         console.error('JSON parsing error:', parseError);
         // Fallback: create a simple table of contents
         const fallbackToc: TableOfContentsItem[] = [];
-        const chaptersCount = Math.max(3, Math.floor(pageCount / 5));
-        const pagesPerChapter = Math.floor(pageCount / chaptersCount);
+        const chaptersCount = Math.max(3, Math.ceil(pageCount / 3));
+        const pagesPerChapter = Math.ceil(pageCount / chaptersCount);
         
         for (let i = 0; i < chaptersCount; i++) {
+          const pageNum = Math.min(i * pagesPerChapter + 1, pageCount);
           fallbackToc.push({
-            page: i * pagesPerChapter + 1,
-            title: `الفصل ${i + 1}: ${topic} - الجزء ${i + 1}`
+            page: pageNum,
+            title: language === 'arabic' ? 
+              `الفصل ${i + 1}: ${topic} - الجزء ${i + 1}` :
+              `Chapter ${i + 1}: ${topic} - Part ${i + 1}`
           });
         }
         

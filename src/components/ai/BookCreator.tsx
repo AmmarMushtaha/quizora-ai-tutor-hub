@@ -161,11 +161,13 @@ const BookCreator = () => {
     const margin = 20;
     const contentWidth = pageWidth - (margin * 2);
     
-    // Configure fonts for Arabic
+    // Configure fonts
     pdf.setFont('helvetica');
     
     // Title page
     pdf.setFontSize(24);
+    pdf.setTextColor(44, 62, 80); // Dark blue title
+    
     const titleLines = pdf.splitTextToSize(bookData.title, contentWidth);
     let yPosition = 60;
     
@@ -175,53 +177,92 @@ const BookCreator = () => {
       yPosition += 12;
     });
     
+    // Author
     pdf.setFontSize(16);
-    yPosition += 20;
-    const authorText = `تأليف: ${bookData.author}`;
+    pdf.setTextColor(52, 73, 94); // Slightly lighter
+    yPosition += 30;
+    const authorText = language === 'arabic' ? `تأليف: ${bookData.author}` : `By: ${bookData.author}`;
     const authorWidth = pdf.getTextWidth(authorText);
     pdf.text(authorText, (pageWidth - authorWidth) / 2, yPosition);
+    
+    // Date
+    pdf.setFontSize(12);
+    pdf.setTextColor(127, 140, 141);
+    yPosition += 20;
+    const dateText = new Date().toLocaleDateString(language === 'arabic' ? 'ar-SA' : 'en-US');
+    const dateWidth = pdf.getTextWidth(dateText);
+    pdf.text(dateText, (pageWidth - dateWidth) / 2, yPosition);
+    
+    // Reset color for content
+    pdf.setTextColor(0, 0, 0);
     
     // Table of contents
     pdf.addPage();
     pdf.setFontSize(20);
-    const tocTitle = 'الفهرس';
+    pdf.setTextColor(44, 62, 80);
+    const tocTitle = language === 'arabic' ? 'الفهرس' : 'Table of Contents';
     const tocTitleWidth = pdf.getTextWidth(tocTitle);
     pdf.text(tocTitle, (pageWidth - tocTitleWidth) / 2, 30);
     
     yPosition = 50;
     pdf.setFontSize(12);
+    pdf.setTextColor(0, 0, 0);
     
-    bookData.tableOfContents.forEach((item) => {
-      const line = `${item.title} .................... ${item.page}`;
-      pdf.text(line, margin, yPosition, { align: 'right', maxWidth: contentWidth });
-      yPosition += 8;
+    bookData.tableOfContents.forEach((item, index) => {
+      if (yPosition > pageHeight - 30) {
+        pdf.addPage();
+        yPosition = 30;
+      }
+      
+      const dots = '.'.repeat(Math.max(5, 40 - item.title.length));
+      const line = `${item.title} ${dots} ${item.page}`;
+      
+      if (language === 'arabic') {
+        pdf.text(line, pageWidth - margin, yPosition, { align: 'right', maxWidth: contentWidth });
+      } else {
+        pdf.text(line, margin, yPosition, { maxWidth: contentWidth });
+      }
+      yPosition += 10;
     });
     
     // Content pages
-    bookData.pages.forEach((page) => {
+    bookData.pages.forEach((page, pageIndex) => {
       pdf.addPage();
       
       // Page title
       pdf.setFontSize(18);
+      pdf.setTextColor(44, 62, 80);
       const pageTitleWidth = pdf.getTextWidth(page.title);
       pdf.text(page.title, (pageWidth - pageTitleWidth) / 2, 30);
       
+      // Decorative line under title
+      pdf.setDrawColor(149, 165, 166);
+      pdf.setLineWidth(0.5);
+      pdf.line(margin, 35, pageWidth - margin, 35);
+      
       // Page content
-      pdf.setFontSize(12);
+      pdf.setFontSize(11);
+      pdf.setTextColor(0, 0, 0);
       yPosition = 50;
       
       const contentLines = pdf.splitTextToSize(page.content, contentWidth);
       contentLines.forEach((line: string) => {
-        if (yPosition > pageHeight - margin) {
+        if (yPosition > pageHeight - 30) {
           pdf.addPage();
-          yPosition = margin;
+          yPosition = 25;
         }
-        pdf.text(line, margin, yPosition, { align: 'right', maxWidth: contentWidth });
+        
+        if (language === 'arabic') {
+          pdf.text(line, pageWidth - margin, yPosition, { align: 'right', maxWidth: contentWidth });
+        } else {
+          pdf.text(line, margin, yPosition, { maxWidth: contentWidth });
+        }
         yPosition += 6;
       });
       
       // Page number
       pdf.setFontSize(10);
+      pdf.setTextColor(127, 140, 141);
       const pageNumberText = `${page.pageNumber}`;
       const pageNumWidth = pdf.getTextWidth(pageNumberText);
       pdf.text(pageNumberText, (pageWidth - pageNumWidth) / 2, pageHeight - 10);
@@ -296,18 +337,31 @@ const BookCreator = () => {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="pageCount">عدد الصفحات</Label>
-                  <Select value={pageCount.toString()} onValueChange={(value) => setPageCount(parseInt(value))}>
-                    <SelectTrigger disabled={isGenerating}>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {[5, 10, 15, 20, 25, 30, 40, 50].map((count) => (
-                        <SelectItem key={count} value={count.toString()}>
-                          {count} صفحة
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <div className="flex items-center gap-2">
+                    <Input
+                      id="pageCount"
+                      type="number"
+                      min="5"
+                      max="100"
+                      value={pageCount}
+                      onChange={(e) => setPageCount(Math.max(5, Math.min(100, parseInt(e.target.value) || 5)))}
+                      disabled={isGenerating}
+                      className="flex-1"
+                    />
+                    <Select value={pageCount.toString()} onValueChange={(value) => setPageCount(parseInt(value))}>
+                      <SelectTrigger disabled={isGenerating} className="w-32">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {[5, 10, 15, 20, 25, 30, 40, 50, 75, 100].map((count) => (
+                          <SelectItem key={count} value={count.toString()}>
+                            {count}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <p className="text-sm text-muted-foreground">من 5 إلى 100 صفحة</p>
                 </div>
 
                 <div className="space-y-2">
@@ -317,10 +371,11 @@ const BookCreator = () => {
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="arabic">العربية</SelectItem>
-                      <SelectItem value="english">الإنجليزية</SelectItem>
+                      <SelectItem value="arabic">العربية 🇸🇦</SelectItem>
+                      <SelectItem value="english">English 🇺🇸</SelectItem>
                     </SelectContent>
                   </Select>
+                  <p className="text-sm text-muted-foreground">اختر لغة محتوى الكتاب</p>
                 </div>
               </div>
 
