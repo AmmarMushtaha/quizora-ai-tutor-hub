@@ -5,10 +5,11 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { BookOpen, Download, Loader2, FileText, CreditCard } from 'lucide-react';
+import { BookOpen, Download, Loader2, FileText, CreditCard, AlertCircle, CheckCircle2, Clock } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useProfile } from '@/hooks/useProfile';
+import { Progress } from '@/components/ui/progress';
 import jsPDF from 'jspdf';
 
 interface BookPage {
@@ -33,6 +34,8 @@ const BookCreator = () => {
   const [isGenerating, setIsGenerating] = useState(false);
   const [bookData, setBookData] = useState<BookData | null>(null);
   const [generationProgress, setGenerationProgress] = useState('');
+  const [progressPercent, setProgressPercent] = useState(0);
+  const [currentStep, setCurrentStep] = useState('');
   
   const { profile, refreshCredits } = useProfile();
   const { toast } = useToast();
@@ -60,10 +63,14 @@ const BookCreator = () => {
     }
 
     setIsGenerating(true);
+    setProgressPercent(0);
     setGenerationProgress('بدء إنشاء الكتاب...');
+    setCurrentStep('التحضير');
 
     try {
       // Generate table of contents first
+      setProgressPercent(10);
+      setCurrentStep('إنشاء الفهرس');
       setGenerationProgress('إنشاء فهرس الكتاب...');
       
       const { data: tocData, error: tocError } = await supabase.functions.invoke('gemini-book-creator', {
@@ -90,12 +97,18 @@ const BookCreator = () => {
 
       const tableOfContents = tocData.tableOfContents;
       
+      setProgressPercent(20);
+      setCurrentStep('إنشاء المحتوى');
+      
       // Generate pages content with better progress tracking
       const pages: BookPage[] = [];
+      const totalChapters = tableOfContents.length;
       
       for (let i = 0; i < tableOfContents.length; i++) {
         const chapter = tableOfContents[i];
-        setGenerationProgress(`إنشاء الفصل ${i + 1} من ${tableOfContents.length}: ${chapter.title}...`);
+        const chapterProgress = 20 + ((i / totalChapters) * 70);
+        setProgressPercent(Math.round(chapterProgress));
+        setGenerationProgress(`إنشاء الفصل ${i + 1} من ${totalChapters}: ${chapter.title}...`);
         
         // Add small delay between requests to avoid rate limiting
         if (i > 0) {
@@ -139,6 +152,10 @@ const BookCreator = () => {
         });
       }
 
+      setProgressPercent(95);
+      setCurrentStep('الإنهاء');
+      setGenerationProgress('حفظ الكتاب...');
+
       // Deduct credits
       const { data: deductData, error: deductError } = await supabase.rpc('deduct_credits', {
         p_user_id: profile.user_id,
@@ -160,6 +177,8 @@ const BookCreator = () => {
       };
 
       setBookData(finalBookData);
+      setProgressPercent(100);
+      setCurrentStep('مكتمل');
       setGenerationProgress('تم إنشاء الكتاب بنجاح!');
       
       await refreshCredits();
@@ -190,6 +209,10 @@ const BookCreator = () => {
       });
     } finally {
       setIsGenerating(false);
+      if (!bookData) {
+        setProgressPercent(0);
+        setCurrentStep('');
+      }
     }
   };
 
@@ -325,6 +348,8 @@ const BookCreator = () => {
     setAuthorName('');
     setBookData(null);
     setGenerationProgress('');
+    setProgressPercent(0);
+    setCurrentStep('');
   };
 
   return (
@@ -420,24 +445,56 @@ const BookCreator = () => {
                 </div>
               </div>
 
-              <div className="bg-yellow-50 dark:bg-yellow-950/20 p-4 rounded-lg border border-yellow-200 dark:border-yellow-800">
-                <div className="flex items-center gap-2 text-yellow-800 dark:text-yellow-200">
+              <div className="bg-gradient-to-br from-yellow-50 to-orange-50 dark:from-yellow-950/20 dark:to-orange-950/20 p-5 rounded-xl border border-yellow-200 dark:border-yellow-800 shadow-sm">
+                <div className="flex items-center gap-2 text-yellow-800 dark:text-yellow-200 mb-3">
                   <CreditCard className="w-5 h-5" />
-                  <span className="font-medium">تكلفة إنشاء الكتاب</span>
+                  <span className="font-semibold">تكلفة إنشاء الكتاب</span>
                 </div>
-                <p className="text-yellow-700 dark:text-yellow-300 mt-1">
-                  سيتم خصم {calculateCredits()} كريدت (3 كريدت لكل صفحة)
-                </p>
-                <p className="text-sm text-yellow-600 dark:text-yellow-400 mt-1">
-                  رصيدك الحالي: {profile?.credits || 0} كريدت
-                </p>
+                <div className="space-y-2">
+                  <div className="flex justify-between items-center">
+                    <span className="text-yellow-700 dark:text-yellow-300">التكلفة الإجمالية:</span>
+                    <span className="font-bold text-xl text-yellow-800 dark:text-yellow-200">
+                      {calculateCredits()} كريدت
+                    </span>
+                  </div>
+                  <p className="text-sm text-yellow-600 dark:text-yellow-400">
+                    (3 كريدت × {pageCount} صفحة)
+                  </p>
+                  <div className="flex justify-between items-center pt-2 border-t border-yellow-200 dark:border-yellow-700">
+                    <span className="text-sm text-yellow-600 dark:text-yellow-400">رصيدك الحالي:</span>
+                    <span className="font-semibold text-yellow-800 dark:text-yellow-200">
+                      {profile?.credits || 0} كريدت
+                    </span>
+                  </div>
+                </div>
               </div>
 
               {generationProgress && (
-                <div className="bg-blue-50 dark:bg-blue-950/20 p-4 rounded-lg border border-blue-200 dark:border-blue-800">
-                  <div className="flex items-center gap-2 text-blue-800 dark:text-blue-200">
-                    <Loader2 className="w-5 h-5 animate-spin" />
-                    <span>{generationProgress}</span>
+                <div className="space-y-4">
+                  <div className="bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-950/20 dark:to-indigo-950/20 p-5 rounded-xl border border-blue-200 dark:border-blue-800 shadow-sm">
+                    <div className="flex items-center justify-between mb-3">
+                      <div className="flex items-center gap-2">
+                        <Clock className="w-5 h-5 text-blue-600 dark:text-blue-400 animate-pulse" />
+                        <span className="font-semibold text-blue-800 dark:text-blue-200">{currentStep}</span>
+                      </div>
+                      <span className="text-sm font-medium text-blue-600 dark:text-blue-400">
+                        {progressPercent}%
+                      </span>
+                    </div>
+                    <Progress value={progressPercent} className="h-2 mb-3" />
+                    <p className="text-sm text-blue-700 dark:text-blue-300">
+                      {generationProgress}
+                    </p>
+                  </div>
+                  
+                  <div className="bg-amber-50 dark:bg-amber-950/20 p-4 rounded-lg border border-amber-200 dark:border-amber-800">
+                    <div className="flex items-start gap-2">
+                      <AlertCircle className="w-5 h-5 text-amber-600 dark:text-amber-400 flex-shrink-0 mt-0.5" />
+                      <div className="text-sm text-amber-700 dark:text-amber-300">
+                        <p className="font-medium mb-1">يُرجى الانتظار...</p>
+                        <p>عملية إنشاء الكتاب قد تستغرق عدة دقائق حسب عدد الصفحات. لا تغلق هذه الصفحة.</p>
+                      </div>
+                    </div>
                   </div>
                 </div>
               )}
@@ -445,61 +502,93 @@ const BookCreator = () => {
               <Button 
                 onClick={generateBook} 
                 disabled={isGenerating || !profile || profile.credits < calculateCredits()}
-                className="w-full bg-purple-600 hover:bg-purple-700 text-white"
+                className="w-full bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white font-semibold py-6 shadow-lg hover:shadow-xl transition-all"
+                size="lg"
               >
                 {isGenerating ? (
                   <>
-                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                    جارٍ الإنشاء...
+                    <Loader2 className="w-5 h-5 mr-2 animate-spin" />
+                    جارٍ الإنشاء... ({progressPercent}%)
                   </>
                 ) : (
                   <>
-                    <BookOpen className="w-4 h-4 mr-2" />
-                    إنشاء الكتاب
+                    <BookOpen className="w-5 h-5 mr-2" />
+                    إنشاء الكتاب الآن
                   </>
                 )}
               </Button>
+              
+              {!isGenerating && profile && profile.credits < calculateCredits() && (
+                <div className="bg-red-50 dark:bg-red-950/20 p-4 rounded-lg border border-red-200 dark:border-red-800">
+                  <div className="flex items-start gap-2">
+                    <AlertCircle className="w-5 h-5 text-red-600 dark:text-red-400 flex-shrink-0 mt-0.5" />
+                    <div className="text-sm text-red-700 dark:text-red-300">
+                      <p className="font-medium">رصيد غير كافٍ</p>
+                      <p>تحتاج إلى {calculateCredits() - (profile?.credits || 0)} كريدت إضافي لإنشاء هذا الكتاب.</p>
+                    </div>
+                  </div>
+                </div>
+              )}
             </>
           ) : (
             <div className="space-y-6">
-              <div className="text-center">
+              <div className="text-center bg-gradient-to-br from-green-50 to-emerald-50 dark:from-green-950/20 dark:to-emerald-950/20 p-6 rounded-xl border border-green-200 dark:border-green-800">
+                <div className="inline-flex items-center justify-center w-16 h-16 bg-green-100 dark:bg-green-900/30 rounded-full mb-4">
+                  <CheckCircle2 className="w-8 h-8 text-green-600 dark:text-green-400" />
+                </div>
                 <h3 className="text-2xl font-bold text-green-800 dark:text-green-200 mb-2">
                   تم إنشاء الكتاب بنجاح! 🎉
                 </h3>
                 <p className="text-gray-600 dark:text-gray-400">
                   كتاب "{bookData.title}" جاهز للتحميل
                 </p>
+                <div className="mt-4 flex items-center justify-center gap-4 text-sm text-gray-500 dark:text-gray-400">
+                  <span>📄 {bookData.pages.length} فصل</span>
+                  <span>•</span>
+                  <span>✍️ {bookData.author}</span>
+                </div>
               </div>
 
-              <div className="bg-white dark:bg-gray-800 p-6 rounded-lg border">
-                <h4 className="font-bold text-lg mb-4 flex items-center gap-2">
+              <div className="bg-white dark:bg-gray-800 p-6 rounded-xl border shadow-sm">
+                <h4 className="font-bold text-lg mb-4 flex items-center gap-2 text-purple-700 dark:text-purple-300">
                   <FileText className="w-5 h-5" />
                   فهرس الكتاب
                 </h4>
-                <div className="space-y-2">
+                <div className="space-y-1 max-h-[400px] overflow-y-auto">
                   {bookData.tableOfContents.map((item, index) => (
-                    <div key={index} className="flex justify-between items-center py-2 border-b border-gray-100 dark:border-gray-700 last:border-b-0">
-                      <span className="font-medium">{item.title}</span>
-                      <span className="text-sm text-gray-500">صفحة {item.page}</span>
+                    <div 
+                      key={index} 
+                      className="flex justify-between items-center py-3 px-3 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors border-b border-gray-100 dark:border-gray-700 last:border-b-0"
+                    >
+                      <div className="flex items-center gap-3">
+                        <span className="flex-shrink-0 w-6 h-6 rounded-full bg-purple-100 dark:bg-purple-900/30 text-purple-600 dark:text-purple-400 flex items-center justify-center text-xs font-semibold">
+                          {index + 1}
+                        </span>
+                        <span className="font-medium text-gray-700 dark:text-gray-300">{item.title}</span>
+                      </div>
+                      <span className="text-sm text-gray-500 dark:text-gray-400 flex-shrink-0">صفحة {item.page}</span>
                     </div>
                   ))}
                 </div>
               </div>
 
-              <div className="flex gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <Button 
                   onClick={downloadPDF}
-                  className="flex-1 bg-green-600 hover:bg-green-700 text-white"
+                  className="bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white font-semibold py-6 shadow-lg hover:shadow-xl transition-all"
+                  size="lg"
                 >
-                  <Download className="w-4 h-4 mr-2" />
-                  تحميل PDF
+                  <Download className="w-5 h-5 mr-2" />
+                  تحميل الكتاب PDF
                 </Button>
                 
                 <Button 
                   onClick={resetForm}
                   variant="outline"
-                  className="flex-1"
+                  className="font-semibold py-6 border-2"
+                  size="lg"
                 >
+                  <BookOpen className="w-5 h-5 mr-2" />
                   إنشاء كتاب جديد
                 </Button>
               </div>
