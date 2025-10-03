@@ -84,15 +84,24 @@ const BookCreator = () => {
         }
       });
 
+      console.log('TOC Response:', { tocData, tocError });
+
+      // Check for errors in the response data first (from edge function)
+      if (tocData?.error) {
+        console.error('Edge function returned error:', tocData);
+        throw new Error(tocData.error || 'فشل في إنشاء فهرس الكتاب');
+      }
+
+      // Then check for invocation errors
       if (tocError) {
-        console.error('Function error:', tocError);
-        
-        // Check if it's a retryable error
-        if (tocData?.code === 'SERVICE_OVERLOADED' || tocData?.code === 'QUOTA_EXCEEDED') {
-          throw new Error(tocData.error + ' ⏰');
-        }
-        
-        throw new Error(tocData?.error || tocError.message);
+        console.error('Function invocation error:', tocError);
+        throw new Error(tocError.message || 'فشل في الاتصال بالخادم');
+      }
+
+      // Verify we have the required data
+      if (!tocData?.tableOfContents || !Array.isArray(tocData.tableOfContents)) {
+        console.error('Invalid TOC response:', tocData);
+        throw new Error('لم يتم استلام فهرس صحيح من الخادم');
       }
 
       const tableOfContents = tocData.tableOfContents;
@@ -128,21 +137,24 @@ const BookCreator = () => {
           }
         });
 
+        console.log(`Chapter ${i + 1} Response:`, { pageData, pageError });
+
+        // Check for errors in the response data first (from edge function)
+        if (pageData?.error) {
+          console.error(`Edge function returned error for chapter ${i + 1}:`, pageData);
+          throw new Error(pageData.error || `فشل في إنشاء الفصل ${i + 1}`);
+        }
+
+        // Then check for invocation errors
         if (pageError) {
-          console.error('Function error for chapter:', chapter.title, pageError);
-          
-          // Check if it's a retryable error from response data
-          if (pageData?.code === 'SERVICE_OVERLOADED' || pageData?.code === 'QUOTA_EXCEEDED') {
-            throw new Error(pageData.error + ' ⏰');
-          }
-          
-          // Check error message for retryable conditions
-          const errorMsg = pageData?.error || pageError.message || '';
-          if (errorMsg.includes('overloaded') || errorMsg.includes('busy') || errorMsg.includes('503')) {
-            throw new Error('الخدمة مشغولة حالياً، يرجى المحاولة مرة أخرى خلال دقائق قليلة ⏰');
-          }
-          
-          throw new Error(errorMsg || 'خطأ في إنشاء محتوى الفصل');
+          console.error(`Function invocation error for chapter ${i + 1}:`, pageError);
+          throw new Error(pageError.message || `فشل في الاتصال بالخادم للفصل ${i + 1}`);
+        }
+
+        // Verify we have the required content
+        if (!pageData?.content) {
+          console.error(`No content received for chapter ${i + 1}:`, pageData);
+          throw new Error(`لم يتم استلام محتوى الفصل ${i + 1}`);
         }
 
         pages.push({
