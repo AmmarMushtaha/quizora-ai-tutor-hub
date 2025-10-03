@@ -209,7 +209,7 @@ Write only the content in English without additional headings or formatting.
     
     const response = await retryApiCall(() => 
       fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`,
+        `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`,
         {
           method: 'POST',
           headers: {
@@ -288,7 +288,7 @@ Write only the content in English without additional headings or formatting.
           const jsonData = JSON.parse(jsonMatch[0]);
           return new Response(JSON.stringify({
             tableOfContents: jsonData.tableOfContents,
-            model: 'gemini-1.5-flash'
+            model: 'gemini-2.5-flash'
           }), {
             headers: { ...corsHeaders, 'Content-Type': 'application/json' },
           });
@@ -314,7 +314,7 @@ Write only the content in English without additional headings or formatting.
         
         return new Response(JSON.stringify({
           tableOfContents: fallbackToc,
-          model: 'gemini-1.5-flash'
+          model: 'gemini-2.5-flash'
         }), {
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         });
@@ -323,7 +323,7 @@ Write only the content in English without additional headings or formatting.
       // Return content for page
       return new Response(JSON.stringify({
         content: generatedText.trim(),
-        model: 'gemini-1.5-flash'
+        model: 'gemini-2.5-flash'
       }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
