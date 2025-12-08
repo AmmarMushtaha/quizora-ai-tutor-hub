@@ -7,209 +7,23 @@ export type Json =
   | Json[]
 
 export type Database = {
-  // Allows to automatically instanciate createClient with right options
+  // Allows to automatically instantiate createClient with right options
   // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
-    PostgrestVersion: "12.2.3 (519615d)"
+    PostgrestVersion: "13.0.5"
   }
   public: {
     Tables: {
-      ai_requests: {
-        Row: {
-          audio_url: string | null
-          content: string | null
-          created_at: string
-          credits_used: number
-          duration_minutes: number | null
-          id: string
-          image_url: string | null
-          pages_count: number | null
-          request_type: Database["public"]["Enums"]["ai_request_type"]
-          response: string | null
-          user_id: string
-          word_count: number | null
-        }
-        Insert: {
-          audio_url?: string | null
-          content?: string | null
-          created_at?: string
-          credits_used: number
-          duration_minutes?: number | null
-          id?: string
-          image_url?: string | null
-          pages_count?: number | null
-          request_type: Database["public"]["Enums"]["ai_request_type"]
-          response?: string | null
-          user_id: string
-          word_count?: number | null
-        }
-        Update: {
-          audio_url?: string | null
-          content?: string | null
-          created_at?: string
-          credits_used?: number
-          duration_minutes?: number | null
-          id?: string
-          image_url?: string | null
-          pages_count?: number | null
-          request_type?: Database["public"]["Enums"]["ai_request_type"]
-          response?: string | null
-          user_id?: string
-          word_count?: number | null
-        }
-        Relationships: []
-      }
-      conversation_history: {
-        Row: {
-          content: string
-          created_at: string
-          credits_used: number | null
-          id: string
-          message_type: string
-          session_id: string
-          user_id: string
-        }
-        Insert: {
-          content: string
-          created_at?: string
-          credits_used?: number | null
-          id?: string
-          message_type: string
-          session_id?: string
-          user_id: string
-        }
-        Update: {
-          content?: string
-          created_at?: string
-          credits_used?: number | null
-          id?: string
-          message_type?: string
-          session_id?: string
-          user_id?: string
-        }
-        Relationships: []
-      }
-      profiles: {
-        Row: {
-          avatar_url: string | null
-          created_at: string
-          credits: number
-          email: string
-          full_name: string | null
-          id: string
-          role: Database["public"]["Enums"]["user_role"]
-          total_credits_used: number
-          updated_at: string
-          user_id: string
-        }
-        Insert: {
-          avatar_url?: string | null
-          created_at?: string
-          credits?: number
-          email: string
-          full_name?: string | null
-          id?: string
-          role?: Database["public"]["Enums"]["user_role"]
-          total_credits_used?: number
-          updated_at?: string
-          user_id: string
-        }
-        Update: {
-          avatar_url?: string | null
-          created_at?: string
-          credits?: number
-          email?: string
-          full_name?: string | null
-          id?: string
-          role?: Database["public"]["Enums"]["user_role"]
-          total_credits_used?: number
-          updated_at?: string
-          user_id?: string
-        }
-        Relationships: []
-      }
-      subscriptions: {
-        Row: {
-          bonus_credits: number | null
-          created_at: string
-          credits_included: number
-          end_date: string
-          id: string
-          payment_id: string | null
-          plan_name: string
-          price: number
-          start_date: string
-          status: Database["public"]["Enums"]["subscription_status"]
-          updated_at: string
-          user_id: string
-        }
-        Insert: {
-          bonus_credits?: number | null
-          created_at?: string
-          credits_included: number
-          end_date: string
-          id?: string
-          payment_id?: string | null
-          plan_name: string
-          price: number
-          start_date?: string
-          status?: Database["public"]["Enums"]["subscription_status"]
-          updated_at?: string
-          user_id: string
-        }
-        Update: {
-          bonus_credits?: number | null
-          created_at?: string
-          credits_included?: number
-          end_date?: string
-          id?: string
-          payment_id?: string | null
-          plan_name?: string
-          price?: number
-          start_date?: string
-          status?: Database["public"]["Enums"]["subscription_status"]
-          updated_at?: string
-          user_id?: string
-        }
-        Relationships: []
-      }
+      [_ in never]: never
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      check_user_role: {
-        Args: {
-          user_id_param: string
-          required_role: Database["public"]["Enums"]["user_role"]
-        }
-        Returns: boolean
-      }
-      deduct_credits: {
-        Args: {
-          p_user_id: string
-          p_credits_to_deduct: number
-          p_request_type: Database["public"]["Enums"]["ai_request_type"]
-          p_content?: string
-          p_response?: string
-          p_duration_minutes?: number
-          p_pages_count?: number
-          p_word_count?: number
-        }
-        Returns: boolean
-      }
+      [_ in never]: never
     }
     Enums: {
-      ai_request_type:
-        | "text_question"
-        | "image_question"
-        | "audio_summary"
-        | "mind_map"
-        | "chat_explanation"
-        | "research_paper"
-        | "text_editing"
-      subscription_status: "active" | "expired" | "cancelled"
-      user_role: "user" | "admin"
+      [_ in never]: never
     }
     CompositeTypes: {
       [_ in never]: never
@@ -336,18 +150,6 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {
-      ai_request_type: [
-        "text_question",
-        "image_question",
-        "audio_summary",
-        "mind_map",
-        "chat_explanation",
-        "research_paper",
-        "text_editing",
-      ],
-      subscription_status: ["active", "expired", "cancelled"],
-      user_role: ["user", "admin"],
-    },
+    Enums: {},
   },
 } as const
