@@ -30,11 +30,8 @@ const MindMap = () => {
       // خصم النقاط أولاً
       const { data: deductResult, error: deductError } = await supabase
         .rpc('deduct_credits', {
-          p_user_id: user.id,
-          p_credits_to_deduct: 25,
-          p_request_type: 'research_paper',
-          p_content: topic,
-          p_word_count: topic.split(' ').length
+          user_uuid: user.id,
+          amount: 25
         });
 
       if (deductError || !deductResult) {
@@ -64,16 +61,14 @@ const MindMap = () => {
       const displayText = aiResponse.rawResponse || JSON.stringify(aiResponse.mindmap, null, 2);
       setMindMap(displayText);
       
-      // تحديث قاعدة البيانات بالاستجابة
-      await supabase
-        .rpc('deduct_credits', {
-          p_user_id: user.id,
-          p_credits_to_deduct: 0,
-          p_request_type: 'mind_map',
-          p_content: topic,
-          p_response: displayText,
-          p_word_count: topic.split(' ').length
-        });
+      // تسجيل الطلب في قاعدة البيانات
+      await supabase.from('ai_requests').insert({
+        user_id: user.id,
+        request_type: 'mind_map',
+        prompt: topic,
+        response: displayText,
+        credits_used: 25
+      });
       
       toast.success('تم إنشاء الخريطة الذهنية بنجاح');
     } catch (error) {

@@ -62,12 +62,13 @@ const ChatWithTutor = ({ sessionId: providedSessionId }: ChatWithTutorProps) => 
     if (!user) return;
 
     try {
-      const { data, error } = await supabase
+      const query = supabase
         .from('conversation_history')
         .select('*')
         .eq('user_id', user.id)
-        .eq('session_id', sessionId)
         .order('created_at', { ascending: true });
+      
+      const { data, error } = await query;
 
       if (error) {
         console.error('خطأ في تحميل تاريخ المحادثة:', error);
@@ -160,11 +161,8 @@ const ChatWithTutor = ({ sessionId: providedSessionId }: ChatWithTutorProps) => 
 
       // Deduct the actual credits used
       const { data: creditResult, error: creditError } = await supabase.rpc('deduct_credits', {
-        p_user_id: user.id,
-        p_credits_to_deduct: creditsUsed,
-        p_request_type: 'text_question',
-        p_content: currentMessageText,
-        p_response: data.response
+        user_uuid: user.id,
+        amount: creditsUsed
       });
 
       if (creditError || !creditResult) {

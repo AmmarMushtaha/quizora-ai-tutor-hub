@@ -45,11 +45,8 @@ const TextEditing = () => {
       const wordCount = originalText.split(/\s+/).length;
       const { data: deductResult, error: deductError } = await supabase
         .rpc('deduct_credits', {
-          p_user_id: user.id,
-          p_credits_to_deduct: 8,
-          p_request_type: 'text_editing',
-          p_content: originalText,
-          p_word_count: wordCount
+          user_uuid: user.id,
+          amount: 8
         });
 
       if (deductError || !deductResult) {
@@ -86,16 +83,14 @@ const TextEditing = () => {
 
       setEditedText(aiResponse.response);
       
-      // تحديث قاعدة البيانات بالاستجابة
-      await supabase
-        .rpc('deduct_credits', {
-          p_user_id: user.id,
-          p_credits_to_deduct: 0,
-          p_request_type: 'text_editing',
-          p_content: originalText,
-          p_response: aiResponse.response,
-          p_word_count: wordCount
-        });
+      // تسجيل الطلب في قاعدة البيانات
+      await supabase.from('ai_requests').insert({
+        user_id: user.id,
+        request_type: 'text_editing',
+        prompt: originalText,
+        response: aiResponse.response,
+        credits_used: 8
+      });
       
       toast.success('تم تحرير النص بنجاح');
     } catch (error) {

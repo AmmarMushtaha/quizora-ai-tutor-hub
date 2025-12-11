@@ -33,11 +33,8 @@ const ResearchPaper = () => {
       // خصم النقاط أولاً
       const { data: deductResult, error: deductError } = await supabase
         .rpc('deduct_credits', {
-          p_user_id: user.id,
-          p_credits_to_deduct: 50,
-          p_request_type: 'research_paper',
-          p_content: `${title} - ${topic} - ${requirements}`,
-          p_word_count: `${title} ${topic} ${requirements}`.split(' ').length
+          user_uuid: user.id,
+          amount: 50
         });
 
       if (deductError || !deductResult) {
@@ -85,18 +82,14 @@ ${requirements ? `متطلبات إضافية: ${requirements}` : ''}
 
       setPaper(aiResponse.response);
       
-      // تحديث قاعدة البيانات بالاستجابة
-      const wordCount = aiResponse.response.split(/\s+/).length;
-      await supabase
-        .rpc('deduct_credits', {
-          p_user_id: user.id,
-          p_credits_to_deduct: 0,
-          p_request_type: 'research_paper',
-          p_content: `${title} - ${topic} - ${requirements}`,
-          p_response: aiResponse.response,
-          p_word_count: wordCount,
-          p_pages_count: Math.ceil(wordCount / 250)
-        });
+      // تسجيل الطلب في قاعدة البيانات
+      await supabase.from('ai_requests').insert({
+        user_id: user.id,
+        request_type: 'research_paper',
+        prompt: `${title} - ${topic}`,
+        response: aiResponse.response,
+        credits_used: 50
+      });
       
       toast.success('تم إنشاء البحث الأكاديمي بنجاح');
     } catch (error) {

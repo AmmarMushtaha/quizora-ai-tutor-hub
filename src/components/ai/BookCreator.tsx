@@ -170,11 +170,8 @@ const BookCreator = () => {
 
       // Deduct credits
       const { data: deductData, error: deductError } = await supabase.rpc('deduct_credits', {
-        p_user_id: profile.user_id,
-        p_credits_to_deduct: requiredCredits,
-        p_request_type: 'research_paper',
-        p_content: `كتاب: ${bookTitle} - ${pageCount} صفحة`,
-        p_response: `تم إنشاء كتاب "${bookTitle}" بنجاح`
+        user_uuid: profile.user_id,
+        amount: requiredCredits
       });
 
       if (deductError || !deductData) {

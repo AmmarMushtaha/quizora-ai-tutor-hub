@@ -37,15 +37,10 @@ interface Conversation {
 interface AIRequest {
   id: string;
   request_type: string;
-  content: string;
-  response: string;
+  prompt: string | null;
+  response: string | null;
   credits_used: number;
   created_at: string;
-  duration_minutes?: number;
-  pages_count?: number;
-  word_count?: number;
-  image_url?: string;
-  audio_url?: string;
 }
 
 const History = () => {
@@ -164,10 +159,15 @@ const History = () => {
 
   const deleteConversation = async (sessionId: string) => {
     try {
+      // Delete all messages for this conversation
+      const conversation = conversations.find(c => c.session_id === sessionId);
+      if (!conversation) return;
+      
+      const messageIds = conversation.messages.map((m: any) => m.id);
       const { error } = await supabase
         .from("conversation_history")
         .delete()
-        .eq("session_id", sessionId);
+        .in("id", messageIds);
 
       if (error) throw error;
 
@@ -224,7 +224,7 @@ const History = () => {
     // Filter AI requests
     const filteredRequests = aiRequests.filter(req => {
       const matchesSearch = 
-        req.content?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        req.prompt?.toLowerCase().includes(searchTerm.toLowerCase()) ||
         req.request_type.includes(searchTerm.toLowerCase());
       const matchesDate = filterByDate(req.created_at);
       const matchesType = typeFilter === 'all' || req.request_type === typeFilter;
