@@ -24,15 +24,10 @@ import { useToast } from "@/hooks/use-toast";
 interface AIRequest {
   id: string;
   request_type: string;
-  content: string;
-  response: string;
+  prompt: string | null;
+  response: string | null;
   credits_used: number;
   created_at: string;
-  duration_minutes?: number;
-  pages_count?: number;
-  word_count?: number;
-  image_url?: string;
-  audio_url?: string;
 }
 
 interface AIRequestCardProps {
@@ -99,37 +94,21 @@ export function AIRequestCard({ request }: AIRequestCardProps) {
   };
 
   const copyResponse = () => {
-    navigator.clipboard.writeText(request.response);
-    toast({
-      title: "تم النسخ",
-      description: "تم نسخ الرد",
-    });
+    if (request.response) {
+      navigator.clipboard.writeText(request.response);
+      toast({
+        title: "تم النسخ",
+        description: "تم نسخ الرد",
+      });
+    }
   };
 
   const getContentPreview = () => {
-    if (request.content) {
-      return request.content.length > 150 
-        ? `${request.content.substring(0, 150)}...`
-        : request.content;
+    if (request.prompt) {
+      return request.prompt.length > 150 
+        ? `${request.prompt.substring(0, 150)}...`
+        : request.prompt;
     }
-
-    // Generate content based on request type and metadata
-    if (request.request_type === 'audio_summary' && request.duration_minutes) {
-      return `تلخيص محاضرة صوتية مدتها ${request.duration_minutes} دقيقة`;
-    }
-    if (request.request_type === 'research_paper' && request.pages_count) {
-      return `إنشاء بحث أكاديمي من ${request.pages_count} صفحة`;
-    }
-    if (request.request_type === 'text_editing' && request.word_count) {
-      return `تحرير وتحسين نص يحتوي على ${request.word_count} كلمة`;
-    }
-    if (request.request_type === 'image_question') {
-      return 'حل أسئلة من صورة باستخدام الذكاء الاصطناعي';
-    }
-    if (request.request_type === 'mind_map') {
-      return 'إنشاء خريطة ذهنية تفاعلية';
-    }
-
     return 'طلب ذكاء اصطناعي';
   };
 
@@ -163,28 +142,6 @@ export function AIRequestCard({ request }: AIRequestCardProps) {
             <CardDescription className="text-foreground/80 leading-relaxed">
               {getContentPreview()}
             </CardDescription>
-
-            {/* Additional metadata */}
-            <div className="flex gap-4 text-sm text-muted-foreground">
-              {request.duration_minutes && (
-                <div className="flex items-center gap-1">
-                  <Mic className="w-4 h-4" />
-                  {request.duration_minutes} دقيقة
-                </div>
-              )}
-              {request.pages_count && (
-                <div className="flex items-center gap-1">
-                  <FileText className="w-4 h-4" />
-                  {request.pages_count} صفحة
-                </div>
-              )}
-              {request.word_count && (
-                <div className="flex items-center gap-1">
-                  <Edit className="w-4 h-4" />
-                  {request.word_count} كلمة
-                </div>
-              )}
-            </div>
           </div>
           
           <div className="opacity-0 group-hover:opacity-100 transition-opacity">
@@ -208,21 +165,9 @@ export function AIRequestCard({ request }: AIRequestCardProps) {
                     <div className="space-y-3">
                       <h4 className="font-medium text-foreground">تفاصيل الطلب:</h4>
                       <div className="bg-muted/50 p-4 rounded-lg">
-                        <p className="whitespace-pre-wrap">{request.content || getContentPreview()}</p>
+                        <p className="whitespace-pre-wrap">{request.prompt || getContentPreview()}</p>
                       </div>
                     </div>
-
-                    {/* Image if available */}
-                    {request.image_url && (
-                      <div className="space-y-3">
-                        <h4 className="font-medium text-foreground">الصورة المرفقة:</h4>
-                        <img 
-                          src={request.image_url} 
-                          alt="الصورة المرفقة" 
-                          className="rounded-lg border border-border max-w-full h-auto"
-                        />
-                      </div>
-                    )}
 
                     {/* Response */}
                     {request.response && (
@@ -241,12 +186,6 @@ export function AIRequestCard({ request }: AIRequestCardProps) {
                     <Button variant="outline" onClick={copyResponse} className="flex-1">
                       <Copy className="w-4 h-4 mr-2" />
                       نسخ الرد
-                    </Button>
-                  )}
-                  {request.audio_url && (
-                    <Button variant="outline" className="flex-1">
-                      <Download className="w-4 h-4 mr-2" />
-                      تحميل الصوت
                     </Button>
                   )}
                 </div>

@@ -30,11 +30,8 @@ const TextQuestion = () => {
       // خصم النقاط أولاً
       const { data: deductResult, error: deductError } = await supabase
         .rpc('deduct_credits', {
-          p_user_id: user.id,
-          p_credits_to_deduct: 5,
-          p_request_type: 'text_question',
-          p_content: question,
-          p_word_count: question.split(' ').length
+          user_uuid: user.id,
+          amount: 5
         });
 
       if (deductError || !deductResult) {
@@ -63,16 +60,14 @@ const TextQuestion = () => {
 
       setAnswer(aiResponse.response);
       
-      // تحديث قاعدة البيانات بالاستجابة
-      await supabase
-        .rpc('deduct_credits', {
-          p_user_id: user.id,
-          p_credits_to_deduct: 0,
-          p_request_type: 'text_question',
-          p_content: question,
-          p_response: aiResponse.response,
-          p_word_count: question.split(' ').length
-        });
+      // تسجيل الطلب في قاعدة البيانات
+      await supabase.from('ai_requests').insert({
+        user_id: user.id,
+        request_type: 'text_question',
+        prompt: question,
+        response: aiResponse.response,
+        credits_used: 5
+      });
 
       toast.success('تم الحصول على الإجابة بنجاح');
     } catch (error) {

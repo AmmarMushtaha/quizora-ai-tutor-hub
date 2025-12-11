@@ -107,11 +107,8 @@ const AudioSummary = () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (user) {
         await supabase.rpc('deduct_credits', {
-          p_user_id: user.id,
-          p_credits_to_deduct: 20,
-          p_request_type: 'audio_summary',
-          p_response: mockSummary,
-          p_duration_minutes: Math.floor(Math.random() * 10 + 1)
+          user_uuid: user.id,
+          amount: 20
         });
       }
       
