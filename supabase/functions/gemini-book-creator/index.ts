@@ -68,8 +68,8 @@ Make sure all titles are in English only and relevant to the topic.`;
 
     } else if (action === 'generate_page') {
       systemPrompt = language === 'arabic'
-        ? `أنت كاتب محترف متخصص في الكتابة التعليمية باللغة العربية الفصحى. اكتب محتوى تعليمي عالي الجودة. استخدم اللغة العربية الفصحى فقط. لا تستخدم أي كلمات إنجليزية. اكتب بأسلوب واضح وجذاب.`
-        : `You are a professional educational content writer. Write high-quality educational content in clear English. Use engaging and clear writing style.`;
+        ? `أنت كاتب محترف متخصص في الكتابة التعليمية باللغة العربية الفصحى. اكتب محتوى تعليمي عالي الجودة ومنسق بشكل جميل. استخدم اللغة العربية الفصحى فقط. لا تستخدم أي كلمات إنجليزية. اكتب بأسلوب واضح وجذاب.`
+        : `You are a professional educational content writer. Write high-quality, beautifully formatted educational content in clear English. Use engaging and clear writing style.`;
 
       userPrompt = language === 'arabic'
         ? `اكتب محتوى الفصل التالي من كتاب "${bookTitle}":
@@ -79,13 +79,20 @@ Make sure all titles are in English only and relevant to the topic.`;
 الموضوع العام: ${topic}
 
 اكتب محتوى تعليمي شامل ومفصل (1000-1500 كلمة) باللغة العربية الفصحى فقط.
+
+**قواعد التنسيق المهمة:**
+- استخدم **نص عريض** للعناوين الفرعية والنقاط المهمة
+- استخدم القوائم النقطية (-) لتنظيم المعلومات
+- استخدم الأرقام (1. 2. 3.) للخطوات المتسلسلة
+- اترك مسافة بين الفقرات
+- اجعل الفقرات متوسطة الطول (3-5 جمل)
+
 اجعل المحتوى:
-- منظماً ومتسلسلاً
+- منظماً ومتسلسلاً مع فقرات واضحة
 - غنياً بالمعلومات المفيدة
 - يحتوي على أمثلة عملية
-- سهل الفهم
-
-اكتب المحتوى مباشرة بدون عناوين فرعية إضافية.`
+- سهل القراءة والفهم
+- مُنسقاً بشكل جميل وواضح`
         : `Write content for the following chapter from the book "${bookTitle}":
 
 Chapter Title: ${chapterTitle}
@@ -93,19 +100,34 @@ Chapter Number: ${chapterNumber} of ${totalChapters}
 General Topic: ${topic}
 
 Write comprehensive educational content (1000-1500 words) in clear English.
+
+**Important Formatting Rules:**
+- Use **bold text** for subheadings and important points
+- Use bullet points (-) to organize information
+- Use numbers (1. 2. 3.) for sequential steps
+- Leave space between paragraphs
+- Keep paragraphs medium length (3-5 sentences)
+
 Make the content:
-- Organized and sequential
+- Organized and sequential with clear paragraphs
 - Rich with useful information
 - Contains practical examples
-- Easy to understand
-
-Write the content directly without additional subheadings.`;
+- Easy to read and understand
+- Beautifully formatted and clear`;
 
     } else if (action === 'generate_image') {
-      // Generate illustration for a chapter
-      const imagePrompt = language === 'arabic'
-        ? `Create a beautiful, professional illustration for a book chapter about "${chapterTitle}" in a book titled "${bookTitle}". The illustration should be educational, colorful, and suitable for a digital book. Modern flat design style with vibrant colors.`
-        : `Create a beautiful, professional illustration for a book chapter about "${chapterTitle}" in a book titled "${bookTitle}". The illustration should be educational, colorful, and suitable for a digital book. Modern flat design style with vibrant colors.`;
+      // Generate illustration for a chapter - NO TEXT IN IMAGES
+      const imagePrompt = `Create a beautiful, professional illustration for a book chapter about "${chapterTitle}" in a book titled "${bookTitle}". 
+
+CRITICAL REQUIREMENTS:
+- DO NOT include ANY text, letters, words, numbers, or typography in the image
+- NO labels, NO captions, NO watermarks, NO titles
+- ONLY visual elements, icons, and graphics
+- Clean, modern flat design style with vibrant colors
+- Professional and educational aesthetic
+- Suitable for a digital book illustration
+- Abstract or symbolic representation of the concept
+- High quality, visually appealing artwork`;
 
       console.log('Generating image for chapter:', chapterTitle);
 
