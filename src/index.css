@@ -123,95 +123,56 @@
 }
 
 @layer components {
-  /* أزرار متوهجة */
+  /* أزرار بسيطة */
   .btn-glow {
-    @apply bg-gradient-to-r from-primary to-accent text-primary-foreground px-6 py-3 rounded-xl font-semibold;
-    background: var(--gradient-primary);
-    box-shadow: var(--shadow-glow);
-    transition: var(--transition-smooth);
+    @apply bg-primary text-primary-foreground px-4 py-2 rounded-lg font-medium;
+    transition: all 0.2s ease;
   }
   
   .btn-glow:hover {
-    box-shadow: var(--shadow-glow-strong);
-    transform: translateY(-2px);
+    @apply bg-primary/90;
+    transform: translateY(-1px);
   }
 
-  /* بطاقات متوهجة */
+  /* بطاقات بسيطة */
   .card-glow {
-    @apply bg-card border border-border rounded-xl p-6;
-    backdrop-filter: blur(10px);
-    transition: var(--transition-smooth);
+    @apply bg-card border border-border rounded-lg p-4;
+    transition: all 0.2s ease;
   }
   
   .card-glow:hover {
-    box-shadow: var(--shadow-glow);
-    transform: translateY(-5px);
-  }
-
-  /* تأثيرات الكتابة */
-  .typing-effect {
-    overflow: hidden;
-    border-right: 3px solid hsl(var(--primary));
-    white-space: nowrap;
-    animation: typing 3.5s steps(40, end), blink-caret 0.75s step-end infinite;
-  }
-
-  /* تأثير الشعار المتحرك */
-  .logo-animate {
-    animation: float 3s ease-in-out infinite;
-  }
-  
-  .logo-glow {
-    filter: drop-shadow(0 0 20px hsl(var(--primary) / 0.5));
+    @apply shadow-sm;
   }
 
   /* تدرج النص */
   .text-gradient {
-    background: var(--gradient-primary);
-    -webkit-background-clip: text;
+    @apply bg-gradient-to-r from-primary to-accent bg-clip-text;
     -webkit-text-fill-color: transparent;
-    background-clip: text;
   }
 
-  /* تأثيرات التفاعل */
+  /* تأثيرات التفاعل الخفيفة */
   .interactive-hover {
-    transition: var(--transition-bounce);
+    transition: transform 0.2s ease;
   }
   
   .interactive-hover:hover {
-    transform: scale(1.05);
+    transform: scale(1.02);
   }
 }
 
 @layer utilities {
-  /* الحركات المخصصة */
-  @keyframes typing {
-    from { width: 0 }
-    to { width: 100% }
-  }
-
-  @keyframes blink-caret {
-    from, to { border-color: transparent }
-    50% { border-color: hsl(var(--primary)) }
-  }
-
+  /* حركات خفيفة */
   @keyframes float {
     0%, 100% { transform: translateY(0px) }
-    50% { transform: translateY(-10px) }
+    50% { transform: translateY(-5px) }
   }
 
   @keyframes pulse-glow {
-    0%, 100% { box-shadow: 0 0 20px hsl(var(--primary) / 0.3) }
-    50% { box-shadow: 0 0 40px hsl(var(--primary) / 0.6) }
-  }
-
-  @keyframes slide-in {
-    from { transform: translateX(100%); opacity: 0; }
-    to { transform: translateX(0); opacity: 1; }
+    0%, 100% { opacity: 1 }
+    50% { opacity: 0.8 }
   }
 
   /* فئات الحركة */
-  .animate-float { animation: float 3s ease-in-out infinite; }
+  .animate-float { animation: float 4s ease-in-out infinite; }
   .animate-pulse-glow { animation: pulse-glow 2s ease-in-out infinite; }
-  .animate-slide-in { animation: slide-in 0.5s ease-out; }
 }

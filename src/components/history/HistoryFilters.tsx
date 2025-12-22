@@ -45,37 +45,37 @@ export function HistoryFilters({
   const [showFilters, setShowFilters] = useState(false);
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-3">
       {/* Search and Filter Toggle */}
-      <div className="flex gap-4 items-center">
+      <div className="flex gap-2 items-center">
         <div className="relative flex-1">
-          <Search className="absolute right-3 top-3 h-4 w-4 text-muted-foreground" />
+          <Search className="absolute right-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
           <Input
-            placeholder="البحث في المحادثات والطلبات..."
+            placeholder="البحث..."
             value={searchTerm}
             onChange={(e) => onSearchChange(e.target.value)}
-            className="pr-10"
+            className="pr-9 h-9 text-sm"
           />
         </div>
         
         <Button
           variant="outline"
+          size="sm"
           onClick={() => setShowFilters(!showFilters)}
-          className="gap-2"
+          className="gap-1.5 h-9 px-2.5"
         >
-          <Filter className="w-4 h-4" />
-          تصفية
+          <Filter className="w-3.5 h-3.5" />
+          <span className="hidden sm:inline">تصفية</span>
           {activeFiltersCount > 0 && (
-            <Badge variant="secondary" className="ml-2">
+            <Badge variant="secondary" className="h-5 px-1.5 text-xs">
               {activeFiltersCount}
             </Badge>
           )}
         </Button>
 
         {activeFiltersCount > 0 && (
-          <Button variant="ghost" onClick={onClearFilters} className="gap-2">
+          <Button variant="ghost" size="sm" onClick={onClearFilters} className="h-9 w-9 p-0">
             <X className="w-4 h-4" />
-            مسح الفلاتر
           </Button>
         )}
       </div>
@@ -83,78 +83,79 @@ export function HistoryFilters({
       {/* Advanced Filters */}
       {showFilters && (
         <Card className="bg-muted/30">
-          <CardContent className="p-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          <CardContent className="p-3">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-2 md:gap-3">
               {/* Date Filter */}
-              <div className="space-y-2">
-                <label className="text-sm font-medium">التاريخ</label>
+              <div className="space-y-1">
+                <label className="text-xs font-medium">التاريخ</label>
                 <Select value={dateFilter} onValueChange={onDateFilterChange}>
-                  <SelectTrigger>
+                  <SelectTrigger className="h-8 text-xs">
                     <SelectValue placeholder="كل الأوقات" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="all">كل الأوقات</SelectItem>
+                    <SelectItem value="all">الكل</SelectItem>
                     <SelectItem value="today">اليوم</SelectItem>
-                    <SelectItem value="week">هذا الأسبوع</SelectItem>
-                    <SelectItem value="month">هذا الشهر</SelectItem>
-                    <SelectItem value="year">هذا العام</SelectItem>
+                    <SelectItem value="week">الأسبوع</SelectItem>
+                    <SelectItem value="month">الشهر</SelectItem>
+                    <SelectItem value="year">السنة</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
 
               {/* Type Filter */}
-              <div className="space-y-2">
-                <label className="text-sm font-medium">نوع الطلب</label>
+              <div className="space-y-1">
+                <label className="text-xs font-medium">النوع</label>
                 <Select value={typeFilter} onValueChange={onTypeFilterChange}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="كل الأنواع" />
+                  <SelectTrigger className="h-8 text-xs">
+                    <SelectValue placeholder="الكل" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="all">كل الأنواع</SelectItem>
-                    <SelectItem value="text_question">سؤال نصي</SelectItem>
-                    <SelectItem value="image_question">سؤال صورة</SelectItem>
-                    <SelectItem value="audio_summary">تلخيص صوتي</SelectItem>
-                    <SelectItem value="mind_map">خريطة ذهنية</SelectItem>
-                    <SelectItem value="chat_explanation">شرح ذكي</SelectItem>
-                    <SelectItem value="research_paper">بحث أكاديمي</SelectItem>
-                    <SelectItem value="text_editing">تحرير نص</SelectItem>
-                    <SelectItem value="book_creator">إنشاء كتاب</SelectItem>
+                    <SelectItem value="all">الكل</SelectItem>
+                    <SelectItem value="text_question">نصي</SelectItem>
+                    <SelectItem value="image_question">صورة</SelectItem>
+                    <SelectItem value="audio_summary">صوتي</SelectItem>
+                    <SelectItem value="mind_map">خريطة</SelectItem>
+                    <SelectItem value="chat_explanation">شرح</SelectItem>
+                    <SelectItem value="research_paper">بحث</SelectItem>
+                    <SelectItem value="text_editing">تحرير</SelectItem>
+                    <SelectItem value="book_creator">كتاب</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
 
               {/* Sort By */}
-              <div className="space-y-2">
-                <label className="text-sm font-medium">ترتيب حسب</label>
+              <div className="space-y-1">
+                <label className="text-xs font-medium">ترتيب</label>
                 <Select value={sortBy} onValueChange={onSortChange}>
-                  <SelectTrigger>
+                  <SelectTrigger className="h-8 text-xs">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="date">التاريخ</SelectItem>
-                    <SelectItem value="credits">الكريدت المستخدم</SelectItem>
-                    <SelectItem value="messages">عدد الرسائل</SelectItem>
+                    <SelectItem value="credits">الكريدت</SelectItem>
+                    <SelectItem value="messages">الرسائل</SelectItem>
                     <SelectItem value="title">العنوان</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
 
               {/* Sort Order */}
-              <div className="space-y-2">
-                <label className="text-sm font-medium">اتجاه الترتيب</label>
+              <div className="space-y-1">
+                <label className="text-xs font-medium">اتجاه</label>
                 <Button
                   variant="outline"
+                  size="sm"
                   onClick={() => onSortOrderChange(sortOrder === 'asc' ? 'desc' : 'asc')}
-                  className="w-full justify-start gap-2"
+                  className="w-full h-8 justify-start gap-1.5 text-xs"
                 >
                   {sortOrder === 'asc' ? (
                     <>
-                      <SortAsc className="w-4 h-4" />
+                      <SortAsc className="w-3.5 h-3.5" />
                       تصاعدي
                     </>
                   ) : (
                     <>
-                      <SortDesc className="w-4 h-4" />
+                      <SortDesc className="w-3.5 h-3.5" />
                       تنازلي
                     </>
                   )}
