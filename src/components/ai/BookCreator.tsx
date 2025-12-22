@@ -12,6 +12,7 @@ import { useProfile } from '@/hooks/useProfile';
 import { Progress } from '@/components/ui/progress';
 import { Switch } from '@/components/ui/switch';
 import jsPDF from 'jspdf';
+import html2canvas from 'html2canvas';
 
 interface BookPage {
   pageNumber: number;
@@ -230,24 +231,215 @@ const BookCreator = () => {
   const downloadPDF = async () => {
     if (!bookData) return;
 
-    // Create HTML content for Arabic support
-    const htmlContent = generateHTMLBook(bookData);
-    
-    // Create a blob and download as HTML file (Arabic-friendly)
-    const blob = new Blob([htmlContent], { type: 'text/html;charset=utf-8' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = `${bookData.title}.html`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(url);
-    
-    toast({
-      title: "تم التحميل",
-      description: `تم تحميل كتاب "${bookData.title}" بنجاح - يمكنك فتحه في المتصفح وطباعته كـ PDF`,
-    });
+    setIsGenerating(true);
+    setCurrentStep('جاري إنشاء ملف PDF...');
+
+    try {
+      // Create a hidden container for rendering
+      const container = document.createElement('div');
+      container.style.position = 'absolute';
+      container.style.left = '-9999px';
+      container.style.top = '0';
+      container.style.width = '595px'; // A4 width in pixels at 72 DPI
+      container.style.background = 'white';
+      document.body.appendChild(container);
+
+      const isArabic = language === 'arabic';
+      const pdf = new jsPDF({
+        orientation: 'portrait',
+        unit: 'pt',
+        format: 'a4'
+      });
+
+      const pageWidth = 595;
+      const pageHeight = 842;
+      const margin = 40;
+      const contentWidth = pageWidth - (margin * 2);
+
+      // Helper function to render a page
+      const renderPage = async (element: HTMLElement): Promise<HTMLCanvasElement> => {
+        // Wait for fonts to load
+        await document.fonts.ready;
+        
+        const canvas = await html2canvas(element, {
+          scale: 2,
+          useCORS: true,
+          allowTaint: true,
+          backgroundColor: '#ffffff',
+          width: pageWidth,
+          logging: false
+        });
+        return canvas;
+      };
+
+      // Create cover page
+      const coverDiv = document.createElement('div');
+      coverDiv.innerHTML = `
+        <div style="
+          width: ${pageWidth}px;
+          height: ${pageHeight}px;
+          background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+          display: flex;
+          flex-direction: column;
+          justify-content: center;
+          align-items: center;
+          text-align: center;
+          padding: 60px;
+          direction: ${isArabic ? 'rtl' : 'ltr'};
+          font-family: 'Tajawal', 'Arial', sans-serif;
+        ">
+          <h1 style="
+            color: white;
+            font-size: 42px;
+            margin: 0 0 30px 0;
+            font-weight: 700;
+            line-height: 1.3;
+          ">${bookData.title}</h1>
+          <div style="
+            width: 100px;
+            height: 4px;
+            background: rgba(255,255,255,0.6);
+            margin: 20px 0;
+            border-radius: 2px;
+          "></div>
+          <p style="
+            color: rgba(255,255,255,0.9);
+            font-size: 24px;
+            margin: 20px 0;
+          ">${bookData.author}</p>
+          <p style="
+            color: rgba(255,255,255,0.7);
+            font-size: 16px;
+          ">${new Date().toLocaleDateString(isArabic ? 'ar-SA' : 'en-US')}</p>
+        </div>
+      `;
+      container.appendChild(coverDiv);
+      
+      setCurrentStep('جاري إنشاء صفحة الغلاف...');
+      const coverCanvas = await renderPage(coverDiv);
+      pdf.addImage(coverCanvas.toDataURL('image/jpeg', 0.95), 'JPEG', 0, 0, pageWidth, pageHeight);
+
+      // Create table of contents page
+      const tocDiv = document.createElement('div');
+      tocDiv.innerHTML = `
+        <div style="
+          width: ${pageWidth}px;
+          min-height: ${pageHeight}px;
+          background: white;
+          padding: 60px ${margin}px;
+          direction: ${isArabic ? 'rtl' : 'ltr'};
+          font-family: 'Tajawal', 'Arial', sans-serif;
+        ">
+          <h2 style="
+            text-align: center;
+            color: #667eea;
+            font-size: 32px;
+            margin-bottom: 40px;
+            padding-bottom: 15px;
+            border-bottom: 3px solid #667eea;
+          ">${isArabic ? 'فهرس المحتويات' : 'Table of Contents'}</h2>
+          ${bookData.tableOfContents.map((item, index) => `
+            <div style="
+              display: flex;
+              justify-content: space-between;
+              align-items: center;
+              padding: 15px 0;
+              border-bottom: 1px dashed #e0e0e0;
+              font-size: 18px;
+            ">
+              <span style="color: #667eea; font-weight: 600;">${index + 1}. ${item.title}</span>
+              <span style="color: #888;">${item.page}</span>
+            </div>
+          `).join('')}
+        </div>
+      `;
+      container.innerHTML = '';
+      container.appendChild(tocDiv);
+      
+      setCurrentStep('جاري إنشاء فهرس المحتويات...');
+      pdf.addPage();
+      const tocCanvas = await renderPage(tocDiv);
+      pdf.addImage(tocCanvas.toDataURL('image/jpeg', 0.95), 'JPEG', 0, 0, pageWidth, pageHeight);
+
+      // Create chapter pages
+      for (let i = 0; i < bookData.pages.length; i++) {
+        const page = bookData.pages[i];
+        setCurrentStep(`جاري إنشاء الفصل ${i + 1} من ${bookData.pages.length}...`);
+        setProgressPercent(Math.round(((i + 1) / bookData.pages.length) * 100));
+
+        const chapterDiv = document.createElement('div');
+        chapterDiv.innerHTML = `
+          <div style="
+            width: ${pageWidth}px;
+            min-height: ${pageHeight}px;
+            background: white;
+            padding: 50px ${margin}px;
+            direction: ${isArabic ? 'rtl' : 'ltr'};
+            font-family: 'Tajawal', 'Arial', sans-serif;
+          ">
+            <div style="
+              text-align: center;
+              margin-bottom: 30px;
+              padding-bottom: 20px;
+              border-bottom: 2px solid #667eea;
+            ">
+              <span style="
+                background: #667eea;
+                color: white;
+                padding: 8px 20px;
+                border-radius: 20px;
+                font-size: 14px;
+              ">${isArabic ? 'الفصل' : 'Chapter'} ${i + 1}</span>
+              <h2 style="
+                color: #1a1a2e;
+                font-size: 28px;
+                margin: 20px 0 0 0;
+                font-weight: 700;
+              ">${page.title}</h2>
+            </div>
+            ${page.imageUrl ? `
+              <div style="text-align: center; margin: 20px 0;">
+                <img src="${page.imageUrl}" style="max-width: 100%; max-height: 300px; border-radius: 8px; box-shadow: 0 4px 15px rgba(0,0,0,0.1);" />
+              </div>
+            ` : ''}
+            <div style="
+              font-size: 16px;
+              line-height: 2;
+              color: #333;
+              text-align: justify;
+            ">${page.content.replace(/\n/g, '<br/>')}</div>
+          </div>
+        `;
+        container.innerHTML = '';
+        container.appendChild(chapterDiv);
+
+        pdf.addPage();
+        const chapterCanvas = await renderPage(chapterDiv);
+        pdf.addImage(chapterCanvas.toDataURL('image/jpeg', 0.95), 'JPEG', 0, 0, pageWidth, pageHeight);
+      }
+
+      // Clean up
+      document.body.removeChild(container);
+
+      // Save the PDF
+      pdf.save(`${bookData.title}.pdf`);
+
+      toast({
+        title: "تم التحميل بنجاح",
+        description: `تم تحميل كتاب "${bookData.title}" بصيغة PDF`,
+      });
+    } catch (error) {
+      console.error('Error generating PDF:', error);
+      toast({
+        title: "خطأ",
+        description: "حدث خطأ أثناء إنشاء ملف PDF",
+        variant: "destructive"
+      });
+    } finally {
+      setIsGenerating(false);
+      setCurrentStep('');
+      setProgressPercent(100);
+    }
   };
 
   const generateHTMLBook = (book: BookData): string => {
