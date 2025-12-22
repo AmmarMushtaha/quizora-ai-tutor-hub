@@ -32,12 +32,18 @@ serve(async (req) => {
         ? `أنت كاتب عربي محترف. مهمتك إنشاء فهرس كتاب منظم ومرتب. يجب أن تكتب بالعربية الفصحى فقط. لا تستخدم أي كلمات إنجليزية. ستعطيني النتيجة بتنسيق JSON فقط.`
         : `You are a professional English book writer. Your task is to create an organized book table of contents. Write in clear English only. Return result in JSON format only.`;
 
+      // Calculate flexible chapter count - allow ±30% based on content needs
+      const baseChapters = Math.ceil(pageCount / 3);
+      const minChapters = Math.max(3, Math.floor(baseChapters * 0.7));
+      const maxChapters = Math.ceil(baseChapters * 1.3);
+
       userPrompt = language === 'arabic' 
         ? `أنشئ فهرساً لكتاب بالمعلومات التالية:
 - عنوان الكتاب: ${bookTitle}
 - الموضوع: ${topic}
-- عدد الفصول: ${Math.ceil(pageCount / 3)} فصل
 - المؤلف: ${authorName}
+
+**ملاحظة مهمة:** المستخدم طلب حوالي ${pageCount} صفحة، لكن اختر عدد الفصول المناسب لتغطية الموضوع بشكل شامل (بين ${minChapters} و ${maxChapters} فصل تقريباً). إذا كان الموضوع يحتاج محتوى أكثر لشرحه بشكل جيد، أضف فصولاً إضافية.
 
 أعطني النتيجة بتنسيق JSON التالي فقط بدون أي نص إضافي:
 {
@@ -52,8 +58,9 @@ serve(async (req) => {
         : `Create a table of contents for a book with:
 - Book Title: ${bookTitle}
 - Topic: ${topic}
-- Number of chapters: ${Math.ceil(pageCount / 3)} chapters
 - Author: ${authorName}
+
+**Important Note:** The user requested approximately ${pageCount} pages, but choose the appropriate number of chapters to comprehensively cover the topic (approximately between ${minChapters} and ${maxChapters} chapters). If the topic needs more content to explain it well, add additional chapters.
 
 Return result in this JSON format only without any additional text:
 {
