@@ -44,10 +44,16 @@ const Dashboard = () => {
   const navigate = useNavigate();
   const location = useLocation();
   
-  // Check for session ID from navigation state or URL params
+  // Check for session ID or resume data from navigation state or URL params
   const sessionId = location.state?.sessionId || new URLSearchParams(location.search).get('sessionId');
-  const [activeTab, setActiveTab] = React.useState(sessionId ? 'workspace' : 'workspace');
-  const [activeComponent, setActiveComponent] = React.useState(sessionId ? 'chat-tutor' : null);
+  const conversationId = location.state?.conversationId;
+  const resumeData = location.state?.resumeData;
+  const resumeTool = location.state?.resumeTool;
+  
+  const [activeTab, setActiveTab] = React.useState(sessionId || conversationId || resumeTool ? 'workspace' : 'workspace');
+  const [activeComponent, setActiveComponent] = React.useState<string | null>(
+    resumeTool || (sessionId || conversationId ? 'chat-tutor' : null)
+  );
 
   React.useEffect(() => {
     if (!user) {
@@ -56,11 +62,11 @@ const Dashboard = () => {
   }, [user, navigate]);
 
   React.useEffect(() => {
-    if (sessionId) {
+    if (sessionId || conversationId || resumeTool) {
       setActiveTab('workspace');
-      setActiveComponent('chat-tutor');
+      setActiveComponent(resumeTool || 'chat-tutor');
     }
-  }, [sessionId]);
+  }, [sessionId, conversationId, resumeTool]);
 
   if (error) {
     return (
@@ -447,14 +453,14 @@ const Dashboard = () => {
                     <TabsContent key={feature.id} value={feature.id} className="mt-6">
                       {profile && (feature.id === 'book-creator' ? profile.credits >= 9 : profile.credits >= feature.credits) ? (
                         <div className="bg-card/50 backdrop-blur-sm border border-border/50 rounded-2xl p-6">
-                          <React.Suspense fallback={
+                        <React.Suspense fallback={
                             <div className="flex items-center justify-center py-8">
                               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
                               <span className="mr-2">جاري التحميل...</span>
                             </div>
                           }>
-                            {feature.id === 'chat-tutor' && sessionId ? (
-                              <feature.component sessionId={sessionId} />
+                            {feature.id === 'chat-tutor' && (sessionId || conversationId) ? (
+                              <feature.component sessionId={sessionId} conversationId={conversationId} />
                             ) : (
                               <feature.component />
                             )}

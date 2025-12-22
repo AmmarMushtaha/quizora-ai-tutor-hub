@@ -118,6 +118,7 @@ export function HistoryFilters({
                     <SelectItem value="chat_explanation">شرح ذكي</SelectItem>
                     <SelectItem value="research_paper">بحث أكاديمي</SelectItem>
                     <SelectItem value="text_editing">تحرير نص</SelectItem>
+                    <SelectItem value="book_creator">إنشاء كتاب</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
