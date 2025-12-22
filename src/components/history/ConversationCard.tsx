@@ -95,79 +95,79 @@ export function ConversationCard({ conversation, onDelete, onContinue }: Convers
   };
 
   return (
-    <Card className="group hover:shadow-lg transition-all duration-300 hover:scale-[1.02] bg-gradient-to-br from-card/50 to-card border border-border/50 backdrop-blur-sm">
-      <CardHeader className="pb-3">
-        <div className="flex items-start justify-between">
-          <div className="flex-1 space-y-2">
-            <CardTitle className="text-lg line-clamp-2 group-hover:text-primary transition-colors">
+    <Card className="group hover:shadow-md transition-all duration-200 bg-card border border-border/50">
+      <CardHeader className="p-3 md:p-4">
+        <div className="flex items-start justify-between gap-2">
+          <div className="flex-1 min-w-0 space-y-1.5">
+            <CardTitle className="text-sm md:text-base line-clamp-2">
               {conversation.title}
             </CardTitle>
             
-            <div className="flex flex-wrap items-center gap-3 text-sm text-muted-foreground">
-              <div className="flex items-center gap-1.5">
-                <Clock className="w-4 h-4 text-accent" />
-                <span>{formatDate(conversation.updated_at)}</span>
-              </div>
+            <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+              <span className="flex items-center gap-1">
+                <Clock className="w-3 h-3" />
+                {formatDate(conversation.updated_at)}
+              </span>
               
-              <div className="flex items-center gap-1.5">
-                <MessageCircle className="w-4 h-4 text-blue-500" />
-                <span>{conversation.message_count} رسالة</span>
-              </div>
+              <span className="flex items-center gap-1">
+                <MessageCircle className="w-3 h-3" />
+                {conversation.message_count}
+              </span>
               
-              <Badge variant="secondary" className="gap-1.5">
-                <Coins className="w-3 h-3 text-yellow-500" />
-                {conversation.total_credits_used} كريدت
+              <Badge variant="secondary" className="gap-1 text-xs py-0">
+                <Coins className="w-2.5 h-2.5 text-yellow-500" />
+                {conversation.total_credits_used}
               </Badge>
             </div>
           </div>
           
-          <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+          <div className="flex gap-1 shrink-0">
             {onContinue && (
               <Button 
-                variant="outline" 
+                variant="ghost" 
                 size="sm" 
                 onClick={handleContinue}
-                className="hover:bg-primary/10 hover:text-primary"
+                className="h-7 w-7 p-0"
               >
-                <Play className="w-4 h-4" />
+                <Play className="w-3.5 h-3.5" />
               </Button>
             )}
 
             <Dialog>
               <DialogTrigger asChild>
-                <Button variant="outline" size="sm" className="hover:bg-primary/10">
-                  <Eye className="w-4 h-4" />
+                <Button variant="ghost" size="sm" className="h-7 w-7 p-0">
+                  <Eye className="w-3.5 h-3.5" />
                 </Button>
               </DialogTrigger>
-              <DialogContent className="max-w-4xl max-h-[80vh]">
+              <DialogContent className="max-w-[95vw] md:max-w-2xl max-h-[85vh]">
                 <DialogHeader>
-                  <DialogTitle className="flex items-center gap-3">
-                    <MessageCircle className="w-5 h-5 text-primary" />
-                    {conversation.title}
+                  <DialogTitle className="flex items-center gap-2 text-base">
+                    <MessageCircle className="w-4 h-4 text-primary" />
+                    <span className="truncate">{conversation.title}</span>
                   </DialogTitle>
                 </DialogHeader>
                 
-                <ScrollArea className="h-[60vh] mt-4">
-                  <div className="space-y-4 pr-4">
+                <ScrollArea className="h-[50vh] md:h-[60vh] mt-3">
+                  <div className="space-y-3 pr-3">
                     {conversation.messages.map((message, index) => (
                       <div
                         key={index}
-                        className={`flex gap-3 ${
+                        className={`flex gap-2 ${
                           message.message_type === 'user' ? 'justify-end' : 'justify-start'
                         }`}
                       >
-                        <div className={`flex gap-3 max-w-[80%] ${
+                        <div className={`flex gap-2 max-w-[85%] ${
                           message.message_type === 'user' ? 'flex-row-reverse' : 'flex-row'
                         }`}>
-                          <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
+                          <div className={`w-6 h-6 rounded-full flex items-center justify-center shrink-0 ${
                             message.message_type === 'user' 
                               ? 'bg-primary text-primary-foreground' 
-                              : 'bg-accent text-accent-foreground'
+                              : 'bg-muted'
                           }`}>
-                            {message.message_type === 'user' ? <User className="w-4 h-4" /> : <Bot className="w-4 h-4" />}
+                            {message.message_type === 'user' ? <User className="w-3 h-3" /> : <Bot className="w-3 h-3" />}
                           </div>
                           
-                          <div className={`p-4 rounded-xl ${
+                          <div className={`p-2.5 rounded-lg text-sm ${
                             message.message_type === 'user'
                               ? 'bg-primary text-primary-foreground'
                               : 'bg-muted'
@@ -176,27 +176,11 @@ export function ConversationCard({ conversation, onDelete, onContinue }: Convers
                               <AIResponse 
                                 response={message.content} 
                                 model="gemini" 
-                                type={(() => {
-                                  // كشف أكثر دقة لنوع المحتوى
-                                  const content = message.content.toLowerCase();
-                                  
-                                  // كشف الخرائط الذهنية بناءً على هيكل JSON
-                                  if ((content.includes('"branches"') || content.includes('"branch"')) && 
-                                      (content.includes('"title"') || content.includes('"name"'))) {
-                                    return "mindmap";
-                                  }
-                                  
-                                  // كشف الجداول - سيتم معالجتها كنص
-                                  if (content.includes('|') && content.includes('---')) {
-                                    return "text";
-                                  }
-                                  
-                                  return "text";
-                                })()}
+                                type="text"
                                 isLoading={false}
                               />
                             ) : (
-                              <p className="whitespace-pre-wrap">{message.content}</p>
+                              <p className="whitespace-pre-wrap text-sm">{message.content}</p>
                             )}
                           </div>
                         </div>
@@ -205,15 +189,15 @@ export function ConversationCard({ conversation, onDelete, onContinue }: Convers
                   </div>
                 </ScrollArea>
                 
-                <div className="flex gap-2 pt-4 border-t">
-                  <Button variant="outline" onClick={copyContent} className="flex-1">
-                    <Copy className="w-4 h-4 mr-2" />
-                    نسخ المحادثة
+                <div className="flex gap-2 pt-3 border-t">
+                  <Button variant="outline" onClick={copyContent} size="sm" className="flex-1">
+                    <Copy className="w-3.5 h-3.5 mr-1.5" />
+                    نسخ
                   </Button>
                   {onContinue && (
-                    <Button onClick={handleContinue} className="flex-1">
-                      <Play className="w-4 h-4 mr-2" />
-                      استكمال المحادثة
+                    <Button onClick={handleContinue} size="sm" className="flex-1">
+                      <Play className="w-3.5 h-3.5 mr-1.5" />
+                      استكمال
                     </Button>
                   )}
                 </div>
@@ -221,26 +205,23 @@ export function ConversationCard({ conversation, onDelete, onContinue }: Convers
             </Dialog>
             
             <Button 
-              variant="outline" 
+              variant="ghost" 
               size="sm" 
               onClick={handleDelete}
               disabled={isDeleting}
-              className="hover:bg-destructive/10 hover:text-destructive"
+              className="h-7 w-7 p-0 hover:bg-destructive/10 hover:text-destructive"
             >
-              <Trash2 className="w-4 h-4" />
+              <Trash2 className="w-3.5 h-3.5" />
             </Button>
           </div>
         </div>
       </CardHeader>
       
       {conversation.messages.length > 0 && (
-        <CardContent className="pt-0">
-          <div className="text-sm text-muted-foreground bg-muted/30 p-3 rounded-lg">
-            <p className="line-clamp-2">
-              <span className="font-medium">آخر رسالة:</span>{" "}
-              {conversation.messages[conversation.messages.length - 1]?.content?.slice(0, 150) + 
-               (conversation.messages[conversation.messages.length - 1]?.content?.length > 150 ? '...' : '') || 'لا يوجد محتوى'}
-            </p>
+        <CardContent className="pt-0 px-3 pb-3 md:px-4 md:pb-4">
+          <div className="text-xs text-muted-foreground bg-muted/30 p-2 rounded-lg line-clamp-2">
+            {conversation.messages[conversation.messages.length - 1]?.content?.slice(0, 100) + 
+             (conversation.messages[conversation.messages.length - 1]?.content?.length > 100 ? '...' : '') || 'لا يوجد محتوى'}
           </div>
         </CardContent>
       )}

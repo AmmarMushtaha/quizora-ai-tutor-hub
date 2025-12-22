@@ -299,36 +299,36 @@ const History = () => {
         <AppSidebar profile={profile} onRefreshCredits={refetchProfile} />
         <SidebarInset>
           {/* Header */}
-          <header className="flex items-center gap-4 p-4 border-b bg-card/50 backdrop-blur-sm">
-            <SidebarTrigger />
-            <div className="flex items-center gap-3">
-              <div className="p-2 rounded-lg bg-primary/10">
-                <BarChart3 className="w-6 h-6 text-primary" />
+          <header className="flex items-center gap-2 md:gap-4 p-3 md:p-4 border-b bg-card/50 backdrop-blur-sm">
+            <SidebarTrigger className="shrink-0" />
+            <div className="flex items-center gap-2 md:gap-3 min-w-0">
+              <div className="p-1.5 md:p-2 rounded-lg bg-primary/10 shrink-0">
+                <BarChart3 className="w-4 h-4 md:w-5 md:h-5 text-primary" />
               </div>
-              <div>
-                <h1 className="text-xl font-bold flex items-center gap-2">
+              <div className="min-w-0">
+                <h1 className="text-base md:text-lg font-bold flex items-center gap-1.5">
                   سجل النشاط
-                  <Sparkles className="w-5 h-5 text-yellow-500" />
+                  <Sparkles className="w-3.5 h-3.5 md:w-4 md:h-4 text-yellow-500" />
                 </h1>
-                <p className="text-sm text-muted-foreground">
+                <p className="text-xs md:text-sm text-muted-foreground truncate hidden sm:block">
                   تاريخ شامل لكل محادثاتك وطلباتك
                 </p>
               </div>
             </div>
             
-            <div className="mr-auto flex items-center gap-3">
-              <Badge variant="outline" className="gap-2">
-                <TrendingUp className="w-4 h-4" />
-                {conversations.length + aiRequests.length} إجمالي العناصر
+            <div className="mr-auto flex items-center gap-2">
+              <Badge variant="outline" className="gap-1 text-xs hidden sm:flex">
+                <TrendingUp className="w-3 h-3" />
+                {conversations.length + aiRequests.length}
               </Badge>
-              <Button variant="ghost" size="sm" onClick={() => navigate("/dashboard")}>
-                <ArrowLeft className="w-4 h-4 mr-2" />
-                العودة للوحة التحكم
+              <Button variant="ghost" size="sm" onClick={() => navigate("/dashboard")} className="h-8 px-2 md:px-3">
+                <ArrowLeft className="w-4 h-4" />
+                <span className="hidden sm:inline mr-1">العودة</span>
               </Button>
             </div>
           </header>
 
-          <div className="p-6 space-y-6">
+          <div className="p-3 md:p-6 space-y-4 md:space-y-6">
             {/* Filters */}
             <HistoryFilters
               searchTerm={searchTerm}
@@ -347,69 +347,74 @@ const History = () => {
 
             {/* Tabs */}
             <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as any)}>
-              <TabsList className="grid w-full grid-cols-3">
-                <TabsTrigger value="overview" className="gap-2">
-                  <BarChart3 className="w-4 h-4" />
-                  نظرة عامة
+              <TabsList className="grid w-full grid-cols-3 h-auto">
+                <TabsTrigger value="overview" className="gap-1 md:gap-2 text-xs md:text-sm py-2 px-1 md:px-3">
+                  <BarChart3 className="w-3.5 h-3.5 md:w-4 md:h-4" />
+                  <span className="hidden sm:inline">نظرة عامة</span>
+                  <span className="sm:hidden">عامة</span>
                 </TabsTrigger>
-                <TabsTrigger value="conversations" className="gap-2">
-                  <MessageCircle className="w-4 h-4" />
-                  المحادثات ({filteredAndSortedData.conversations.length})
+                <TabsTrigger value="conversations" className="gap-1 md:gap-2 text-xs md:text-sm py-2 px-1 md:px-3">
+                  <MessageCircle className="w-3.5 h-3.5 md:w-4 md:h-4" />
+                  <span className="hidden sm:inline">المحادثات</span>
+                  <span className="sm:hidden">{filteredAndSortedData.conversations.length}</span>
+                  <span className="hidden sm:inline">({filteredAndSortedData.conversations.length})</span>
                 </TabsTrigger>
-                <TabsTrigger value="requests" className="gap-2">
-                  <Brain className="w-4 h-4" />
-                  طلبات الذكاء الاصطناعي ({filteredAndSortedData.requests.length})
+                <TabsTrigger value="requests" className="gap-1 md:gap-2 text-xs md:text-sm py-2 px-1 md:px-3">
+                  <Brain className="w-3.5 h-3.5 md:w-4 md:h-4" />
+                  <span className="hidden sm:inline">طلبات AI</span>
+                  <span className="sm:hidden">{filteredAndSortedData.requests.length}</span>
+                  <span className="hidden sm:inline">({filteredAndSortedData.requests.length})</span>
                 </TabsTrigger>
               </TabsList>
 
               {/* Overview Tab */}
               <TabsContent value="overview">
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4 mb-4 md:mb-6">
                   <Card>
-                    <CardContent className="p-4 text-center">
-                      <MessageCircle className="w-8 h-8 mx-auto mb-2 text-primary" />
-                      <div className="text-2xl font-bold">{conversations.length}</div>
-                      <div className="text-sm text-muted-foreground">محادثة</div>
+                    <CardContent className="p-3 md:p-4 text-center">
+                      <MessageCircle className="w-5 h-5 md:w-6 md:h-6 mx-auto mb-1.5 text-primary" />
+                      <div className="text-lg md:text-2xl font-bold">{conversations.length}</div>
+                      <div className="text-xs md:text-sm text-muted-foreground">محادثة</div>
                     </CardContent>
                   </Card>
                   <Card>
-                    <CardContent className="p-4 text-center">
-                      <Brain className="w-8 h-8 mx-auto mb-2 text-primary" />
-                      <div className="text-2xl font-bold">{aiRequests.length}</div>
-                      <div className="text-sm text-muted-foreground">طلب AI</div>
+                    <CardContent className="p-3 md:p-4 text-center">
+                      <Brain className="w-5 h-5 md:w-6 md:h-6 mx-auto mb-1.5 text-primary" />
+                      <div className="text-lg md:text-2xl font-bold">{aiRequests.length}</div>
+                      <div className="text-xs md:text-sm text-muted-foreground">طلب AI</div>
                     </CardContent>
                   </Card>
                 </div>
               </TabsContent>
 
               {/* Conversations Tab */}
-              <TabsContent value="conversations" className="space-y-6">
+              <TabsContent value="conversations" className="space-y-4 md:space-y-6">
                 <div className="flex items-center justify-between">
-                  <h2 className="text-2xl font-bold">سجل المحادثات</h2>
-                  <Badge variant="secondary">
+                  <h2 className="text-lg md:text-xl font-bold">سجل المحادثات</h2>
+                  <Badge variant="secondary" className="text-xs">
                     {filteredAndSortedData.conversations.length} محادثة
                   </Badge>
                 </div>
 
                 {filteredAndSortedData.conversations.length === 0 ? (
                   <Card className="bg-muted/30">
-                    <CardContent className="text-center py-12">
-                      <MessageCircle className="w-16 h-16 text-muted-foreground mx-auto mb-4 opacity-50" />
-                      <h3 className="text-lg font-medium mb-2">لا توجد محادثات</h3>
-                      <p className="text-muted-foreground mb-6">
+                    <CardContent className="text-center py-8 md:py-12 px-4">
+                      <MessageCircle className="w-10 h-10 md:w-12 md:h-12 text-muted-foreground mx-auto mb-3 opacity-50" />
+                      <h3 className="text-base md:text-lg font-medium mb-2">لا توجد محادثات</h3>
+                      <p className="text-sm text-muted-foreground mb-4 md:mb-6">
                         {searchTerm || dateFilter !== 'all' 
-                          ? "لم يتم العثور على محادثات مطابقة للفلاتر المحددة" 
-                          : "لم تبدأ أي محادثة بعد. ابدأ محادثتك الأولى الآن!"
+                          ? "لم يتم العثور على محادثات مطابقة" 
+                          : "لم تبدأ أي محادثة بعد"
                         }
                       </p>
-                      <Button onClick={() => navigate("/dashboard")} className="gap-2">
-                        <Sparkles className="w-4 h-4" />
-                        ابدأ محادثة جديدة
+                      <Button onClick={() => navigate("/dashboard")} className="gap-2" size="sm">
+                        <Sparkles className="w-3.5 h-3.5" />
+                        ابدأ محادثة
                       </Button>
                     </CardContent>
                   </Card>
                 ) : (
-                  <div className="grid grid-cols-1 gap-6">
+                  <div className="grid grid-cols-1 gap-3 md:gap-4">
                     {filteredAndSortedData.conversations.map((conversation) => (
                       <ConversationCard
                         key={conversation.id}
@@ -423,33 +428,33 @@ const History = () => {
               </TabsContent>
 
               {/* AI Requests Tab */}
-              <TabsContent value="requests" className="space-y-6">
+              <TabsContent value="requests" className="space-y-4 md:space-y-6">
                 <div className="flex items-center justify-between">
-                  <h2 className="text-2xl font-bold">طلبات الذكاء الاصطناعي</h2>
-                  <Badge variant="secondary">
+                  <h2 className="text-lg md:text-xl font-bold">طلبات AI</h2>
+                  <Badge variant="secondary" className="text-xs">
                     {filteredAndSortedData.requests.length} طلب
                   </Badge>
                 </div>
 
                 {filteredAndSortedData.requests.length === 0 ? (
                   <Card className="bg-muted/30">
-                    <CardContent className="text-center py-12">
-                      <Brain className="w-16 h-16 text-muted-foreground mx-auto mb-4 opacity-50" />
-                      <h3 className="text-lg font-medium mb-2">لا توجد طلبات</h3>
-                      <p className="text-muted-foreground mb-6">
+                    <CardContent className="text-center py-8 md:py-12 px-4">
+                      <Brain className="w-10 h-10 md:w-12 md:h-12 text-muted-foreground mx-auto mb-3 opacity-50" />
+                      <h3 className="text-base md:text-lg font-medium mb-2">لا توجد طلبات</h3>
+                      <p className="text-sm text-muted-foreground mb-4 md:mb-6">
                         {searchTerm || dateFilter !== 'all' || typeFilter !== 'all'
-                          ? "لم يتم العثور على طلبات مطابقة للفلاتر المحددة"
-                          : "لم تستخدم أدوات الذكاء الاصطناعي بعد. استكشف الأدوات المتاحة!"
+                          ? "لم يتم العثور على طلبات مطابقة"
+                          : "لم تستخدم أدوات AI بعد"
                         }
                       </p>
-                      <Button onClick={() => navigate("/dashboard")} className="gap-2">
-                        <Brain className="w-4 h-4" />
+                      <Button onClick={() => navigate("/dashboard")} className="gap-2" size="sm">
+                        <Brain className="w-3.5 h-3.5" />
                         استكشف الأدوات
                       </Button>
                     </CardContent>
                   </Card>
                 ) : (
-                  <div className="grid grid-cols-1 gap-6">
+                  <div className="grid grid-cols-1 gap-3 md:gap-4">
                     {filteredAndSortedData.requests.map((request) => (
                       <AIRequestCard key={request.id} request={request} />
                     ))}
