@@ -227,154 +227,275 @@ const BookCreator = () => {
     }
   };
 
-  const downloadPDF = () => {
+  const downloadPDF = async () => {
     if (!bookData) return;
 
-    const pdf = new jsPDF('p', 'mm', 'a4');
-    const pageWidth = pdf.internal.pageSize.getWidth();
-    const pageHeight = pdf.internal.pageSize.getHeight();
-    const margin = 20;
-    const contentWidth = pageWidth - (margin * 2);
+    // Create HTML content for Arabic support
+    const htmlContent = generateHTMLBook(bookData);
     
-    pdf.setFont('helvetica');
-    
-    // Title page with gradient-like background
-    pdf.setFillColor(99, 102, 241);
-    pdf.rect(0, 0, pageWidth, 80, 'F');
-    
-    pdf.setFontSize(28);
-    pdf.setTextColor(255, 255, 255);
-    
-    const titleLines = pdf.splitTextToSize(bookData.title, contentWidth);
-    let yPosition = 40;
-    
-    titleLines.forEach((line: string) => {
-      const textWidth = pdf.getTextWidth(line);
-      pdf.text(line, (pageWidth - textWidth) / 2, yPosition);
-      yPosition += 14;
-    });
-    
-    // Author
-    pdf.setFontSize(18);
-    pdf.setTextColor(44, 62, 80);
-    yPosition = 110;
-    const authorText = language === 'arabic' ? `تأليف: ${bookData.author}` : `By: ${bookData.author}`;
-    const authorWidth = pdf.getTextWidth(authorText);
-    pdf.text(authorText, (pageWidth - authorWidth) / 2, yPosition);
-    
-    // Decorative elements
-    pdf.setDrawColor(99, 102, 241);
-    pdf.setLineWidth(2);
-    pdf.line(margin + 30, yPosition + 15, pageWidth - margin - 30, yPosition + 15);
-    
-    // Date
-    pdf.setFontSize(12);
-    pdf.setTextColor(127, 140, 141);
-    yPosition += 40;
-    const dateText = new Date().toLocaleDateString(language === 'arabic' ? 'ar-SA' : 'en-US');
-    const dateWidth = pdf.getTextWidth(dateText);
-    pdf.text(dateText, (pageWidth - dateWidth) / 2, yPosition);
-    
-    // Table of contents
-    pdf.addPage();
-    pdf.setFillColor(249, 250, 251);
-    pdf.rect(0, 0, pageWidth, 50, 'F');
-    
-    pdf.setFontSize(24);
-    pdf.setTextColor(99, 102, 241);
-    const tocTitle = language === 'arabic' ? 'فهرس المحتويات' : 'Table of Contents';
-    const tocTitleWidth = pdf.getTextWidth(tocTitle);
-    pdf.text(tocTitle, (pageWidth - tocTitleWidth) / 2, 35);
-    
-    yPosition = 70;
-    pdf.setFontSize(12);
-    pdf.setTextColor(55, 65, 81);
-    
-    bookData.tableOfContents.forEach((item, index) => {
-      if (yPosition > pageHeight - 30) {
-        pdf.addPage();
-        yPosition = 30;
-      }
-      
-      // Chapter number circle
-      pdf.setFillColor(99, 102, 241);
-      pdf.circle(margin + 5, yPosition - 3, 4, 'F');
-      pdf.setTextColor(255, 255, 255);
-      pdf.setFontSize(8);
-      pdf.text(String(index + 1), margin + 3.5, yPosition - 1);
-      
-      pdf.setTextColor(55, 65, 81);
-      pdf.setFontSize(12);
-      
-      const dots = '.'.repeat(Math.max(5, 35 - item.title.length));
-      const line = `${item.title} ${dots} ${item.page}`;
-      
-      pdf.text(line, margin + 15, yPosition, { maxWidth: contentWidth - 15 });
-      yPosition += 12;
-    });
-    
-    // Content pages
-    bookData.pages.forEach((page, pageIndex) => {
-      pdf.addPage();
-      
-      // Page header
-      pdf.setFillColor(99, 102, 241);
-      pdf.rect(0, 0, pageWidth, 8, 'F');
-      
-      // Page title
-      pdf.setFontSize(20);
-      pdf.setTextColor(99, 102, 241);
-      const pageTitleWidth = pdf.getTextWidth(page.title);
-      pdf.text(page.title, (pageWidth - pageTitleWidth) / 2, 25);
-      
-      // Decorative line
-      pdf.setDrawColor(229, 231, 235);
-      pdf.setLineWidth(0.5);
-      pdf.line(margin, 32, pageWidth - margin, 32);
-      
-      yPosition = 45;
-      
-      // Add image if exists
-      if (page.imageUrl && page.imageUrl.startsWith('data:image')) {
-        try {
-          pdf.addImage(page.imageUrl, 'PNG', margin, yPosition, contentWidth, 60);
-          yPosition += 70;
-        } catch (e) {
-          console.log('Could not add image to PDF');
-        }
-      }
-      
-      // Page content
-      pdf.setFontSize(11);
-      pdf.setTextColor(55, 65, 81);
-      
-      const contentLines = pdf.splitTextToSize(page.content, contentWidth);
-      contentLines.forEach((line: string) => {
-        if (yPosition > pageHeight - 25) {
-          pdf.addPage();
-          pdf.setFillColor(99, 102, 241);
-          pdf.rect(0, 0, pageWidth, 8, 'F');
-          yPosition = 25;
-        }
-        
-        pdf.text(line, margin, yPosition, { maxWidth: contentWidth });
-        yPosition += 6;
-      });
-      
-      // Page number
-      pdf.setFontSize(10);
-      pdf.setTextColor(156, 163, 175);
-      const pageNumberText = `${pageIndex + 1}`;
-      const pageNumWidth = pdf.getTextWidth(pageNumberText);
-      pdf.text(pageNumberText, (pageWidth - pageNumWidth) / 2, pageHeight - 10);
-    });
-    
-    pdf.save(`${bookData.title}.pdf`);
+    // Create a blob and download as HTML file (Arabic-friendly)
+    const blob = new Blob([htmlContent], { type: 'text/html;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `${bookData.title}.html`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
     
     toast({
       title: "تم التحميل",
-      description: `تم تحميل كتاب "${bookData.title}" بصيغة PDF`,
+      description: `تم تحميل كتاب "${bookData.title}" بنجاح - يمكنك فتحه في المتصفح وطباعته كـ PDF`,
     });
+  };
+
+  const generateHTMLBook = (book: BookData): string => {
+    const isArabic = language === 'arabic';
+    const dir = isArabic ? 'rtl' : 'ltr';
+    const fontFamily = isArabic ? "'Amiri', 'Traditional Arabic', 'Arial', serif" : "'Georgia', serif";
+    
+    const chaptersHTML = book.pages.map((page, index) => `
+      <div class="chapter" style="page-break-before: always;">
+        <div class="chapter-header">
+          <div class="chapter-number">${isArabic ? 'الفصل' : 'Chapter'} ${index + 1}</div>
+          <h2 class="chapter-title">${page.title}</h2>
+        </div>
+        ${page.imageUrl ? `<div class="chapter-image"><img src="${page.imageUrl}" alt="${page.title}" /></div>` : ''}
+        <div class="chapter-content">${page.content.replace(/\n/g, '<br/>')}</div>
+      </div>
+    `).join('');
+
+    const tocHTML = book.tableOfContents.map((item, index) => `
+      <div class="toc-item">
+        <span class="toc-number">${index + 1}</span>
+        <span class="toc-title">${item.title}</span>
+        <span class="toc-dots"></span>
+        <span class="toc-page">${item.page}</span>
+      </div>
+    `).join('');
+
+    return `<!DOCTYPE html>
+<html lang="${isArabic ? 'ar' : 'en'}" dir="${dir}">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>${book.title}</title>
+  <link href="https://fonts.googleapis.com/css2?family=Amiri:wght@400;700&family=Tajawal:wght@400;500;700&display=swap" rel="stylesheet">
+  <style>
+    @page {
+      size: A4;
+      margin: 2cm;
+    }
+    
+    * {
+      box-sizing: border-box;
+    }
+    
+    body {
+      font-family: ${fontFamily};
+      line-height: 1.8;
+      color: #1a1a2e;
+      background: linear-gradient(135deg, #faf8f5 0%, #f5f0e8 100%);
+      margin: 0;
+      padding: 20px;
+      direction: ${dir};
+    }
+    
+    .book-container {
+      max-width: 800px;
+      margin: 0 auto;
+      background: #fff;
+      box-shadow: 0 10px 40px rgba(0,0,0,0.15);
+      border-radius: 8px;
+      overflow: hidden;
+    }
+    
+    /* Cover Page */
+    .cover-page {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      padding: 80px 40px;
+      text-align: center;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+    }
+    
+    .cover-page h1 {
+      font-size: 3rem;
+      margin: 0 0 30px 0;
+      text-shadow: 2px 2px 4px rgba(0,0,0,0.2);
+      font-weight: 700;
+    }
+    
+    .cover-author {
+      font-size: 1.5rem;
+      opacity: 0.9;
+      margin-bottom: 20px;
+    }
+    
+    .cover-date {
+      font-size: 1rem;
+      opacity: 0.7;
+    }
+    
+    .cover-decoration {
+      width: 100px;
+      height: 3px;
+      background: rgba(255,255,255,0.5);
+      margin: 30px auto;
+      border-radius: 2px;
+    }
+    
+    /* Table of Contents */
+    .toc-page {
+      padding: 60px 40px;
+      page-break-before: always;
+    }
+    
+    .toc-page h2 {
+      text-align: center;
+      color: #667eea;
+      font-size: 2rem;
+      margin-bottom: 40px;
+      border-bottom: 3px solid #667eea;
+      padding-bottom: 15px;
+    }
+    
+    .toc-item {
+      display: flex;
+      align-items: baseline;
+      padding: 12px 0;
+      border-bottom: 1px dashed #e0e0e0;
+    }
+    
+    .toc-number {
+      background: #667eea;
+      color: white;
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.85rem;
+      font-weight: bold;
+      flex-shrink: 0;
+      margin-${isArabic ? 'left' : 'right'}: 15px;
+    }
+    
+    .toc-title {
+      flex: 1;
+      font-size: 1.1rem;
+    }
+    
+    .toc-dots {
+      flex: 1;
+      border-bottom: 2px dotted #ccc;
+      margin: 0 10px;
+      min-width: 30px;
+    }
+    
+    .toc-page-num {
+      color: #667eea;
+      font-weight: bold;
+    }
+    
+    /* Chapter Pages */
+    .chapter {
+      padding: 60px 40px;
+    }
+    
+    .chapter-header {
+      text-align: center;
+      margin-bottom: 40px;
+      padding-bottom: 20px;
+      border-bottom: 2px solid #667eea;
+    }
+    
+    .chapter-number {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      display: inline-block;
+      padding: 8px 20px;
+      border-radius: 20px;
+      font-size: 0.9rem;
+      margin-bottom: 15px;
+    }
+    
+    .chapter-title {
+      color: #1a1a2e;
+      font-size: 1.8rem;
+      margin: 0;
+      font-weight: 700;
+    }
+    
+    .chapter-image {
+      margin: 30px 0;
+      text-align: center;
+    }
+    
+    .chapter-image img {
+      max-width: 100%;
+      height: auto;
+      border-radius: 12px;
+      box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+    }
+    
+    .chapter-content {
+      font-size: 1.15rem;
+      line-height: 2;
+      text-align: justify;
+      color: #333;
+    }
+    
+    /* Print Styles */
+    @media print {
+      body {
+        background: white;
+        padding: 0;
+      }
+      
+      .book-container {
+        box-shadow: none;
+        border-radius: 0;
+      }
+      
+      .cover-page {
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+      }
+      
+      .chapter {
+        page-break-before: always;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="book-container">
+    <!-- Cover Page -->
+    <div class="cover-page">
+      <h1>${book.title}</h1>
+      <div class="cover-decoration"></div>
+      <div class="cover-author">${isArabic ? 'تأليف:' : 'By:'} ${book.author}</div>
+      <div class="cover-date">${new Date().toLocaleDateString(isArabic ? 'ar-SA' : 'en-US', { year: 'numeric', month: 'long', day: 'numeric' })}</div>
+    </div>
+    
+    <!-- Table of Contents -->
+    <div class="toc-page">
+      <h2>${isArabic ? 'فهرس المحتويات' : 'Table of Contents'}</h2>
+      ${tocHTML}
+    </div>
+    
+    <!-- Chapters -->
+    ${chaptersHTML}
+  </div>
+</body>
+</html>`;
   };
 
   const resetForm = () => {
