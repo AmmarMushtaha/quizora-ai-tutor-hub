@@ -18,73 +18,73 @@ serve(async (req) => {
       throw new Error('الرجاء إدخال النص والصورة');
     }
 
-    const geminiApiKey = Deno.env.get('GEMINI_API_KEY');
-    if (!geminiApiKey) {
-      throw new Error('مفتاح Gemini API غير موجود');
+    const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
+    if (!LOVABLE_API_KEY) {
+      throw new Error('LOVABLE_API_KEY is not configured');
     }
 
     // إزالة data:image/...;base64, من بداية الصورة إذا كانت موجودة
     const base64Image = image.includes(',') ? image.split(',')[1] : image;
+    const imageUrl = `data:${mimeType};base64,${base64Image}`;
 
-    const response = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent?key=${geminiApiKey}`,
-      {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          contents: [{
-            parts: [
-              {
-                text: `أنت مساعد ذكي يحلل الصور ويجيب على الأسئلة المتعلقة بها باللغة العربية. السؤال: ${prompt}`
-              },
-              {
-                inline_data: {
-                  mime_type: mimeType,
-                  data: base64Image
-                }
-              }
-            ]
-          }],
-          generationConfig: {
-            temperature: 0.7,
-            topK: 32,
-            topP: 0.95,
-            maxOutputTokens: 2048,
+    console.log('Calling Lovable AI with vision...');
+
+    const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${LOVABLE_API_KEY}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        model: 'google/gemini-2.5-flash',
+        messages: [
+          {
+            role: 'system',
+            content: 'أنت مساعد ذكي يحلل الصور ويجيب على الأسئلة المتعلقة بها باللغة العربية بشكل مفصل ودقيق.'
           },
-          safetySettings: [
-            {
-              category: "HARM_CATEGORY_HARASSMENT",
-              threshold: "BLOCK_MEDIUM_AND_ABOVE"
-            },
-            {
-              category: "HARM_CATEGORY_HATE_SPEECH",
-              threshold: "BLOCK_MEDIUM_AND_ABOVE"
-            }
-          ]
-        }),
-      }
-    );
+          {
+            role: 'user',
+            content: [
+              { type: 'text', text: prompt },
+              { type: 'image_url', image_url: { url: imageUrl } }
+            ]
+          }
+        ],
+      }),
+    });
 
     if (!response.ok) {
-      const errorData = await response.text();
-      console.error('Gemini Vision API Error:', errorData);
+      const errorText = await response.text();
+      console.error('Lovable AI Vision Error:', response.status, errorText);
+      
+      if (response.status === 429) {
+        return new Response(
+          JSON.stringify({ error: 'تم تجاوز الحد المسموح، يرجى المحاولة لاحقاً' }),
+          { status: 429, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+      if (response.status === 402) {
+        return new Response(
+          JSON.stringify({ error: 'يرجى إضافة رصيد للحساب' }),
+          { status: 402, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
       throw new Error('حدث خطأ في تحليل الصورة');
     }
 
     const data = await response.json();
+    console.log('Lovable AI Vision response received');
     
-    if (!data.candidates || data.candidates.length === 0) {
+    const generatedText = data.choices?.[0]?.message?.content;
+
+    if (!generatedText) {
       throw new Error('لم يتم الحصول على تحليل للصورة');
     }
-
-    const generatedText = data.candidates[0].content.parts[0].text;
 
     return new Response(
       JSON.stringify({ 
         response: generatedText,
-        model: 'Gemini 2.0 Flash Vision'
+        model: 'Gemini 2.5 Flash Vision'
       }),
       {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
