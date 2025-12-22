@@ -18,9 +18,9 @@ serve(async (req) => {
       throw new Error('الرجاء إدخال موضوع الخريطة الذهنية');
     }
 
-    const geminiApiKey = Deno.env.get('GEMINI_API_KEY');
-    if (!geminiApiKey) {
-      throw new Error('مفتاح Gemini API غير موجود');
+    const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
+    if (!LOVABLE_API_KEY) {
+      throw new Error('LOVABLE_API_KEY is not configured');
     }
 
     const systemPrompt = `أنت خبير في إنشاء الخرائط الذهنية. قم بإنشاء خريطة ذهنية شاملة باللغة العربية للموضوع المعطى.
@@ -43,42 +43,50 @@ serve(async (req) => {
 
 استخدم ألوان مختلفة لكل فرع رئيسي وقدم محتوى غني ومفيد.`;
 
-    const response = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent?key=${geminiApiKey}`,
-      {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          contents: [{
-            parts: [{
-              text: `${systemPrompt}\n\nالموضوع: ${topic}`
-            }]
-          }],
-          generationConfig: {
-            temperature: 0.8,
-            topK: 40,
-            topP: 0.95,
-            maxOutputTokens: 2048,
-          }
-        }),
-      }
-    );
+    console.log('Calling Lovable AI for mindmap...');
+
+    const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${LOVABLE_API_KEY}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        model: 'google/gemini-2.5-flash',
+        messages: [
+          { role: 'system', content: systemPrompt },
+          { role: 'user', content: `الموضوع: ${topic}` }
+        ],
+      }),
+    });
 
     if (!response.ok) {
-      const errorData = await response.text();
-      console.error('Gemini API Error:', errorData);
+      const errorText = await response.text();
+      console.error('Lovable AI Error:', response.status, errorText);
+      
+      if (response.status === 429) {
+        return new Response(
+          JSON.stringify({ error: 'تم تجاوز الحد المسموح، يرجى المحاولة لاحقاً' }),
+          { status: 429, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+      if (response.status === 402) {
+        return new Response(
+          JSON.stringify({ error: 'يرجى إضافة رصيد للحساب' }),
+          { status: 402, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
       throw new Error('حدث خطأ في إنشاء الخريطة الذهنية');
     }
 
     const data = await response.json();
+    console.log('Lovable AI mindmap response received');
     
-    if (!data.candidates || data.candidates.length === 0) {
+    const generatedText = data.choices?.[0]?.message?.content;
+
+    if (!generatedText) {
       throw new Error('لم يتم إنشاء الخريطة الذهنية');
     }
-
-    const generatedText = data.candidates[0].content.parts[0].text;
     
     // محاولة استخراج JSON من الاستجابة
     let mindmapData;
@@ -123,7 +131,7 @@ serve(async (req) => {
       JSON.stringify({ 
         mindmap: mindmapData,
         rawResponse: generatedText,
-        model: 'Gemini 2.0 Flash'
+        model: 'Gemini 2.5 Flash'
       }),
       {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },

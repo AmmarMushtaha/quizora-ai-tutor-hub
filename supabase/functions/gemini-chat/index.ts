@@ -21,9 +21,9 @@ serve(async (req) => {
 
     console.log('Chat request:', { messagesCount: messages.length, sessionId, answerType });
 
-    const geminiApiKey = Deno.env.get('GEMINI_API_KEY');
-    if (!geminiApiKey) {
-      throw new Error('GEMINI_API_KEY not configured');
+    const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
+    if (!LOVABLE_API_KEY) {
+      throw new Error('LOVABLE_API_KEY not configured');
     }
 
     // Create Supabase client
@@ -77,79 +77,64 @@ serve(async (req) => {
 - أضف نصائح إضافية مفيدة`;
     }
 
-    // Format messages for Gemini
-    const geminiMessages = [
-      {
-        role: "user",
-        parts: [{ text: systemPrompt }]
-      }
+    // Format messages for Lovable AI (OpenAI-compatible format)
+    const formattedMessages = [
+      { role: 'system', content: systemPrompt }
     ];
 
     // Add conversation history
     messages.forEach((msg: any) => {
       if (msg.type === 'user') {
-        geminiMessages.push({
-          role: "user",
-          parts: [{ text: msg.content }]
-        });
+        formattedMessages.push({ role: 'user', content: msg.content });
       } else if (msg.type === 'assistant') {
-        geminiMessages.push({
-          role: "model", 
-          parts: [{ text: msg.content }]
-        });
+        formattedMessages.push({ role: 'assistant', content: msg.content });
       }
     });
 
-    console.log('Sending to Gemini:', { messagesCount: geminiMessages.length });
+    console.log('Sending to Lovable AI:', { messagesCount: formattedMessages.length });
 
-    // Call Gemini API
-    const response = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent?key=${geminiApiKey}`,
-      {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          contents: geminiMessages,
-          generationConfig: {
-            temperature: 0.7,
-            topK: 40,
-            topP: 0.95,
-            maxOutputTokens: answerType === 'concise' ? 300 : 1000,
-          },
-          safetySettings: [
-            {
-              category: "HARM_CATEGORY_HARASSMENT",
-              threshold: "BLOCK_MEDIUM_AND_ABOVE"
-            },
-            {
-              category: "HARM_CATEGORY_HATE_SPEECH", 
-              threshold: "BLOCK_MEDIUM_AND_ABOVE"
-            }
-          ]
-        }),
-      }
-    );
+    // Call Lovable AI Gateway
+    const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${LOVABLE_API_KEY}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        model: 'google/gemini-2.5-flash',
+        messages: formattedMessages,
+      }),
+    });
 
     if (!response.ok) {
       const errorText = await response.text();
-      console.error('Gemini API error:', errorText);
-      throw new Error(`Gemini API error: ${response.status}`);
+      console.error('Lovable AI error:', response.status, errorText);
+      
+      if (response.status === 429) {
+        return new Response(
+          JSON.stringify({ error: 'تم تجاوز الحد المسموح، يرجى المحاولة لاحقاً' }),
+          { status: 429, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+      if (response.status === 402) {
+        return new Response(
+          JSON.stringify({ error: 'يرجى إضافة رصيد للحساب' }),
+          { status: 402, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+      throw new Error(`Lovable AI error: ${response.status}`);
     }
 
     const data = await response.json();
-    console.log('Gemini response received');
+    console.log('Lovable AI response received');
 
-    if (!data.candidates?.[0]?.content?.parts?.[0]?.text) {
-      throw new Error('Invalid response from Gemini API');
+    const generatedResponse = data.choices?.[0]?.message?.content;
+
+    if (!generatedResponse) {
+      throw new Error('Invalid response from Lovable AI');
     }
 
-    const generatedResponse = data.candidates[0].content.parts[0].text;
-
     // Calculate credits based on response length
-    // 1 credit per ~150 characters (suitable for Arabic text)
-    // Minimum 1 credit, maximum 10 credits per response
     const responseLength = generatedResponse.length;
     const calculatedCredits = Math.min(Math.max(Math.ceil(responseLength / 150), 1), 10);
 
@@ -165,7 +150,7 @@ serve(async (req) => {
         user_id: user.id,
         session_id: sessionId,
         message_type: 'user',
-        content: messages[messages.length - 1].content, // Last user message
+        content: messages[messages.length - 1].content,
         credits_used: 0
       },
       {
@@ -183,7 +168,6 @@ serve(async (req) => {
 
     if (insertError) {
       console.error('Database insert error:', insertError);
-      // Don't throw error, just log it
     }
 
     console.log('Chat response completed successfully');
