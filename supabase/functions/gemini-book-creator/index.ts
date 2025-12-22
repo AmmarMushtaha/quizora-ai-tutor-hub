@@ -11,52 +11,7 @@ interface TableOfContentsItem {
   title: string;
 }
 
-// Retry function for API calls
-const retryApiCall = async (apiCall: () => Promise<Response>, maxRetries = 3, delayMs = 2000): Promise<Response> => {
-  for (let attempt = 1; attempt <= maxRetries; attempt++) {
-    try {
-      const response = await apiCall();
-      
-      // If successful, return immediately
-      if (response.ok) {
-        return response;
-      }
-      
-      // Check if it's a retryable error
-      const responseClone = response.clone();
-      try {
-        const data = await responseClone.json();
-        
-        // Don't retry for authentication/permission errors
-        if (response.status === 400 || response.status === 401 || response.status === 403) {
-          return response;
-        }
-      } catch (e) {
-        // If we can't parse the response, still retry for 5xx errors
-      }
-      
-      // Retry for server errors (5xx) and rate limits (429, 503)
-      if (attempt === maxRetries) {
-        return response;
-      }
-      
-      console.log(`API call attempt ${attempt} failed (status: ${response.status}), retrying in ${delayMs}ms...`);
-      await new Promise(resolve => setTimeout(resolve, delayMs));
-      
-    } catch (error) {
-      if (attempt === maxRetries) {
-        throw error;
-      }
-      console.log(`API call attempt ${attempt} failed with error: ${error.message}, retrying in ${delayMs}ms...`);
-      await new Promise(resolve => setTimeout(resolve, delayMs));
-    }
-  }
-  
-  throw new Error('Max retries exceeded');
-};
-
 serve(async (req) => {
-  // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
@@ -64,206 +19,158 @@ serve(async (req) => {
   try {
     const { action, bookTitle, topic, pageCount, language, authorName, chapterTitle, chapterNumber, totalChapters } = await req.json();
     
-    const apiKey = Deno.env.get('GEMINI_API_KEY');
-    if (!apiKey) {
-      throw new Error('GEMINI_API_KEY environment variable is not set');
+    const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
+    if (!LOVABLE_API_KEY) {
+      throw new Error('LOVABLE_API_KEY is not configured');
     }
 
-    let prompt = '';
+    let systemPrompt = '';
+    let userPrompt = '';
     
     if (action === 'generate_toc') {
-      // Generate table of contents
-      prompt = `
-${language === 'arabic' ? `
-أنت كاتب محترف متخصص في إنشاء الكتب باللغة العربية. أريدك أن تنشئ فهرساً احترافياً ومنظماً لكتاب.
+      systemPrompt = language === 'arabic' 
+        ? `أنت كاتب عربي محترف. مهمتك إنشاء فهرس كتاب منظم ومرتب. يجب أن تكتب بالعربية الفصحى فقط. لا تستخدم أي كلمات إنجليزية. ستعطيني النتيجة بتنسيق JSON فقط.`
+        : `You are a professional English book writer. Your task is to create an organized book table of contents. Write in clear English only. Return result in JSON format only.`;
 
-معلومات الكتاب:
-- العنوان: ${bookTitle}
-- الموضوع: ${topic}
-- عدد الصفحات المطلوب: ${pageCount}
-- المؤلف: ${authorName}
-
-اكتب فهرساً مفصلاً وشاملاً للكتاب باللغة العربية يغطي الموضوع بشكل كامل ومنطقي.
-
-قم بإنشاء ${Math.ceil(pageCount / 3)} فصول رئيسية موزعة على ${pageCount} صفحة بحيث:
-- الفصل الأول يبدأ من الصفحة 1
-- كل فصل يأخذ حوالي 2-4 صفحات حسب عدد الصفحات الإجمالي
-- الفصل الأخير ينتهي في الصفحة ${pageCount}
-
-أعطني النتيجة في هذا التنسيق JSON بالضبط:
-{
-  "tableOfContents": [
-    {
-      "page": 1,
-      "title": "مقدمة الكتاب"
-    },
-    {
-      "page": 3,
-      "title": "الفصل الأول: [عنوان الفصل]"
-    }
-  ]
-}
-
-تأكد من أن:
-- جميع العناوين باللغة العربية
-- العناوين مناسبة ومعبرة عن محتوى الفصل
-- التوزيع دقيق على ${pageCount} صفحة تماماً
-- الترتيب منطقي ومتدرج من البسيط للمعقد
-` : `
-You are a professional writer specializing in creating books in English. Create a professional and organized table of contents for a book.
-
-Book Information:
-- Title: ${bookTitle}
-- Topic: ${topic}
-- Required Pages: ${pageCount}
-- Author: ${authorName}
-
-Write a detailed and comprehensive table of contents in English that covers the topic completely and logically.
-
-Create ${Math.ceil(pageCount / 3)} main chapters distributed across ${pageCount} pages where:
-- First chapter starts at page 1
-- Each chapter takes about 2-4 pages based on total page count
-- Last chapter ends at page ${pageCount}
-
-Provide the result in this exact JSON format:
-{
-  "tableOfContents": [
-    {
-      "page": 1,
-      "title": "Introduction"
-    },
-    {
-      "page": 3,
-      "title": "Chapter 1: [Chapter Title]"
-    }
-  ]
-}
-
-Make sure that:
-- All titles are in English
-- Titles are appropriate and expressive of chapter content
-- Distribution is exact across ${pageCount} pages
-- Logical order from simple to complex
-`}
-`;
-    } else if (action === 'generate_page') {
-      // Generate content for a specific chapter
-      prompt = `
-${language === 'arabic' ? `
-أنت كاتب محترف متخصص في كتابة المحتوى التعليمي والثقافي باللغة العربية.
-
-معلومات الكتاب:
+      userPrompt = language === 'arabic' 
+        ? `أنشئ فهرساً لكتاب بالمعلومات التالية:
 - عنوان الكتاب: ${bookTitle}
-- الموضوع العام: ${topic}
-- عنوان الفصل: ${chapterTitle}
-- رقم الفصل: ${chapterNumber} من ${totalChapters}
+- الموضوع: ${topic}
+- عدد الفصول: ${Math.ceil(pageCount / 3)} فصل
 - المؤلف: ${authorName}
 
-اكتب محتوى شاملاً ومفصلاً لهذا الفصل باللغة العربية الفصحى. يجب أن يكون المحتوى:
-1. احترافياً ومنظماً بأسلوب أكاديمي
-2. مفصلاً وشاملاً (حوالي 1000-1500 كلمة عربية)
-3. تعليمياً ومفيداً للقارئ العربي
-4. متدرجاً من البسيط إلى المعقد
-5. يحتوي على أمثلة عملية من البيئة العربية
-6. مكتوباً بأسلوب جذاب وواضح باللغة العربية
+أعطني النتيجة بتنسيق JSON التالي فقط بدون أي نص إضافي:
+{
+  "tableOfContents": [
+    {"page": 1, "title": "المقدمة"},
+    {"page": 3, "title": "الفصل الأول: [عنوان مناسب]"},
+    {"page": 6, "title": "الفصل الثاني: [عنوان مناسب]"}
+  ]
+}
 
-تأكد من أن المحتوى:
-- باللغة العربية الفصحى بدون أي كلمات إنجليزية
-- يتناسب مع عنوان الفصل
-- يربط بين المفاهيم والأفكار بأسلوب عربي
-- يقدم قيمة حقيقية للقارئ العربي
-- مكتوب بطريقة سهلة الفهم
-
-اكتب المحتوى فقط باللغة العربية دون إضافة عناوين جانبية أو تنسيقات إضافية.
-` : `
-You are a professional writer specializing in educational and cultural content in English.
-
-Book Information:
+تأكد أن كل العناوين باللغة العربية فقط ومناسبة للموضوع.`
+        : `Create a table of contents for a book with:
 - Book Title: ${bookTitle}
-- General Topic: ${topic}
-- Chapter Title: ${chapterTitle}
-- Chapter Number: ${chapterNumber} of ${totalChapters}
+- Topic: ${topic}
+- Number of chapters: ${Math.ceil(pageCount / 3)} chapters
 - Author: ${authorName}
 
-Write comprehensive and detailed content for this chapter in English. The content should be:
-1. Professional and organized in academic style
-2. Detailed and comprehensive (about 1000-1500 English words)
-3. Educational and useful for English readers
-4. Progressive from simple to complex
-5. Contains practical examples from English context
-6. Written in engaging and clear English style
+Return result in this JSON format only without any additional text:
+{
+  "tableOfContents": [
+    {"page": 1, "title": "Introduction"},
+    {"page": 3, "title": "Chapter 1: [appropriate title]"},
+    {"page": 6, "title": "Chapter 2: [appropriate title]"}
+  ]
+}
 
-Make sure the content:
-- Is in clear English without any Arabic words
-- Matches the chapter title
-- Connects concepts and ideas in English style
-- Provides real value for English readers
-- Written in an easy-to-understand manner
+Make sure all titles are in English only and relevant to the topic.`;
 
-Write only the content in English without additional headings or formatting.
-`}
-`;
-    }
+    } else if (action === 'generate_page') {
+      systemPrompt = language === 'arabic'
+        ? `أنت كاتب محترف متخصص في الكتابة التعليمية باللغة العربية الفصحى. اكتب محتوى تعليمي عالي الجودة. استخدم اللغة العربية الفصحى فقط. لا تستخدم أي كلمات إنجليزية. اكتب بأسلوب واضح وجذاب.`
+        : `You are a professional educational content writer. Write high-quality educational content in clear English. Use engaging and clear writing style.`;
 
-    console.log(`Making API call for action: ${action}`);
-    
-    const response = await retryApiCall(() => 
-      fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`,
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            contents: [
-              {
-                parts: [
-                  {
-                    text: prompt
-                  }
-                ]
-              }
-            ],
-            generationConfig: {
-              temperature: 0.7,
-              topK: 40,
-              topP: 0.95,
-              maxOutputTokens: 8192,
-            }
-          }),
-        }
-      ),
-      3, // max retries
-      3000 // delay between retries (3 seconds)
-    );
+      userPrompt = language === 'arabic'
+        ? `اكتب محتوى الفصل التالي من كتاب "${bookTitle}":
 
-    const data = await response.json();
-    
-    if (!response.ok) {
-      console.error('Gemini API Error:', data);
-      
-      // Handle specific error cases
-      if (data.error?.code === 503 || data.error?.message?.includes('overloaded')) {
+عنوان الفصل: ${chapterTitle}
+رقم الفصل: ${chapterNumber} من ${totalChapters}
+الموضوع العام: ${topic}
+
+اكتب محتوى تعليمي شامل ومفصل (1000-1500 كلمة) باللغة العربية الفصحى فقط.
+اجعل المحتوى:
+- منظماً ومتسلسلاً
+- غنياً بالمعلومات المفيدة
+- يحتوي على أمثلة عملية
+- سهل الفهم
+
+اكتب المحتوى مباشرة بدون عناوين فرعية إضافية.`
+        : `Write content for the following chapter from the book "${bookTitle}":
+
+Chapter Title: ${chapterTitle}
+Chapter Number: ${chapterNumber} of ${totalChapters}
+General Topic: ${topic}
+
+Write comprehensive educational content (1000-1500 words) in clear English.
+Make the content:
+- Organized and sequential
+- Rich with useful information
+- Contains practical examples
+- Easy to understand
+
+Write the content directly without additional subheadings.`;
+
+    } else if (action === 'generate_image') {
+      // Generate illustration for a chapter
+      const imagePrompt = language === 'arabic'
+        ? `Create a beautiful, professional illustration for a book chapter about "${chapterTitle}" in a book titled "${bookTitle}". The illustration should be educational, colorful, and suitable for a digital book. Modern flat design style with vibrant colors.`
+        : `Create a beautiful, professional illustration for a book chapter about "${chapterTitle}" in a book titled "${bookTitle}". The illustration should be educational, colorful, and suitable for a digital book. Modern flat design style with vibrant colors.`;
+
+      console.log('Generating image for chapter:', chapterTitle);
+
+      const imageResponse = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${LOVABLE_API_KEY}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          model: 'google/gemini-2.5-flash-image',
+          messages: [
+            { role: 'user', content: imagePrompt }
+          ],
+          modalities: ['image', 'text']
+        }),
+      });
+
+      if (!imageResponse.ok) {
+        const errorText = await imageResponse.text();
+        console.error('Image generation error:', imageResponse.status, errorText);
         return new Response(JSON.stringify({ 
-          error: language === 'arabic' ? 
-            'الخدمة مشغولة حالياً، يرجى المحاولة مرة أخرى خلال دقائق قليلة' :
-            'Service is currently busy, please try again in a few minutes',
-          code: 'SERVICE_OVERLOADED',
-          retryable: true
+          imageUrl: null,
+          error: 'Failed to generate image'
         }), {
-          status: 503,
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         });
       }
+
+      const imageData = await imageResponse.json();
+      const imageUrl = imageData.choices?.[0]?.message?.images?.[0]?.image_url?.url;
+
+      return new Response(JSON.stringify({ 
+        imageUrl: imageUrl || null,
+        model: 'gemini-2.5-flash-image'
+      }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    console.log(`Calling Lovable AI for action: ${action}`);
+    
+    const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${LOVABLE_API_KEY}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        model: 'google/gemini-2.5-flash',
+        messages: [
+          { role: 'system', content: systemPrompt },
+          { role: 'user', content: userPrompt }
+        ],
+      }),
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error('Lovable AI Error:', response.status, errorText);
       
-      // Handle quota exceeded
-      if (data.error?.code === 429 || data.error?.message?.includes('quota')) {
+      if (response.status === 429) {
         return new Response(JSON.stringify({ 
-          error: language === 'arabic' ? 
-            'تم تجاوز الحد المسموح للاستخدام، يرجى المحاولة لاحقاً' :
-            'Usage quota exceeded, please try again later',
-          code: 'QUOTA_EXCEEDED',
+          error: language === 'arabic' ? 'تم تجاوز الحد المسموح، يرجى المحاولة لاحقاً' : 'Rate limit exceeded, please try again later',
+          code: 'RATE_LIMIT',
           retryable: true
         }), {
           status: 429,
@@ -271,17 +178,30 @@ Write only the content in English without additional headings or formatting.
         });
       }
       
-      throw new Error(`Gemini API error: ${data.error?.message || 'Unknown error'}`);
+      if (response.status === 402) {
+        return new Response(JSON.stringify({ 
+          error: language === 'arabic' ? 'يرجى إضافة رصيد للحساب' : 'Please add credits to your account',
+          code: 'PAYMENT_REQUIRED',
+          retryable: false
+        }), {
+          status: 402,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+      
+      throw new Error(`Lovable AI error: ${response.status}`);
     }
 
-    const generatedText = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+    const data = await response.json();
+    const generatedText = data.choices?.[0]?.message?.content || '';
     
     if (!generatedText) {
-      throw new Error('No text generated from Gemini API');
+      throw new Error('No text generated');
     }
 
+    console.log('Lovable AI response received for:', action);
+
     if (action === 'generate_toc') {
-      // Parse JSON response for table of contents
       try {
         const jsonMatch = generatedText.match(/\{[\s\S]*\}/);
         if (jsonMatch) {
@@ -297,7 +217,7 @@ Write only the content in English without additional headings or formatting.
         }
       } catch (parseError) {
         console.error('JSON parsing error:', parseError);
-        // Fallback: create a simple table of contents
+        // Fallback TOC
         const fallbackToc: TableOfContentsItem[] = [];
         const chaptersCount = Math.max(3, Math.ceil(pageCount / 3));
         const pagesPerChapter = Math.ceil(pageCount / chaptersCount);
@@ -306,9 +226,9 @@ Write only the content in English without additional headings or formatting.
           const pageNum = Math.min(i * pagesPerChapter + 1, pageCount);
           fallbackToc.push({
             page: pageNum,
-            title: language === 'arabic' ? 
-              `الفصل ${i + 1}: ${topic} - الجزء ${i + 1}` :
-              `Chapter ${i + 1}: ${topic} - Part ${i + 1}`
+            title: language === 'arabic' 
+              ? `الفصل ${i + 1}: ${topic} - الجزء ${i + 1}` 
+              : `Chapter ${i + 1}: ${topic} - Part ${i + 1}`
           });
         }
         
@@ -320,7 +240,6 @@ Write only the content in English without additional headings or formatting.
         });
       }
     } else {
-      // Return content for page
       return new Response(JSON.stringify({
         content: generatedText.trim(),
         model: 'gemini-2.5-flash'
@@ -332,17 +251,8 @@ Write only the content in English without additional headings or formatting.
   } catch (error) {
     console.error('Error in gemini-book-creator function:', error);
     
-    // Determine language from request for error messages
-    let errorLanguage = 'english';
-    try {
-      const body = await req.json();
-      errorLanguage = body.language || 'english';
-    } catch {}
-    
     return new Response(JSON.stringify({ 
-      error: errorLanguage === 'arabic' ? 
-        'حدث خطأ أثناء إنشاء الكتاب، يرجى المحاولة مرة أخرى' :
-        'An error occurred while generating the book, please try again',
+      error: 'حدث خطأ أثناء إنشاء الكتاب، يرجى المحاولة مرة أخرى',
       details: error.message,
       code: 'GENERATION_ERROR'
     }), {
