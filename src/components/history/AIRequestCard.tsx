@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { Card, CardContent, CardDescription, CardHeader } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -17,7 +18,9 @@ import {
   Clock,
   Download,
   Copy,
-  Image as ImageIcon
+  Image as ImageIcon,
+  Play,
+  Book
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
@@ -36,6 +39,7 @@ interface AIRequestCardProps {
 
 export function AIRequestCard({ request }: AIRequestCardProps) {
   const { toast } = useToast();
+  const navigate = useNavigate();
 
   const getRequestTypeIcon = (type: string) => {
     switch (type) {
@@ -46,8 +50,39 @@ export function AIRequestCard({ request }: AIRequestCardProps) {
       case 'chat_explanation': return MessageCircle;
       case 'research_paper': return FileText;
       case 'text_editing': return Edit;
+      case 'book_creator': return Book;
       default: return Brain;
     }
+  };
+
+  const getToolId = (type: string) => {
+    switch (type) {
+      case 'text_question': return 'text-question';
+      case 'image_question': return 'image-question';
+      case 'audio_summary': return 'audio-summary';
+      case 'mind_map': return 'mind-map';
+      case 'chat_explanation': return 'chat-tutor';
+      case 'research_paper': return 'research-paper';
+      case 'text_editing': return 'text-editing';
+      case 'book_creator': return 'book-creator';
+      default: return 'text-question';
+    }
+  };
+
+  const canResume = (type: string) => {
+    // الأدوات التي يمكن استئناف العمل فيها
+    return ['mind_map', 'research_paper', 'text_editing', 'chat_explanation'].includes(type);
+  };
+
+  const handleResume = () => {
+    const toolId = getToolId(request.request_type);
+    navigate('/dashboard', { 
+      state: { 
+        resumeTool: toolId,
+        resumePrompt: request.prompt,
+        resumeResponse: request.response
+      } 
+    });
   };
 
   const getRequestTypeName = (type: string) => {
@@ -59,6 +94,7 @@ export function AIRequestCard({ request }: AIRequestCardProps) {
       case 'chat_explanation': return 'شرح ذكي';
       case 'research_paper': return 'بحث أكاديمي';
       case 'text_editing': return 'تحرير نص';
+      case 'book_creator': return 'إنشاء كتاب';
       default: return type;
     }
   };
@@ -144,7 +180,19 @@ export function AIRequestCard({ request }: AIRequestCardProps) {
             </CardDescription>
           </div>
           
-          <div className="opacity-0 group-hover:opacity-100 transition-opacity">
+          <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+            {canResume(request.request_type) && (
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={handleResume}
+                className="hover:bg-primary/10 hover:text-primary"
+                title="استكمال"
+              >
+                <Play className="w-4 h-4" />
+              </Button>
+            )}
+            
             <Dialog>
               <DialogTrigger asChild>
                 <Button variant="outline" size="sm" className="hover:bg-primary/10">
@@ -186,6 +234,12 @@ export function AIRequestCard({ request }: AIRequestCardProps) {
                     <Button variant="outline" onClick={copyResponse} className="flex-1">
                       <Copy className="w-4 h-4 mr-2" />
                       نسخ الرد
+                    </Button>
+                  )}
+                  {canResume(request.request_type) && (
+                    <Button onClick={handleResume} className="flex-1">
+                      <Play className="w-4 h-4 mr-2" />
+                      استكمال العمل
                     </Button>
                   )}
                 </div>

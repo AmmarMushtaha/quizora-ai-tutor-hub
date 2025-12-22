@@ -33,9 +33,10 @@ interface Message {
 
 interface ChatWithTutorProps {
   sessionId?: string;
+  conversationId?: string;
 }
 
-const ChatWithTutor = ({ sessionId: providedSessionId }: ChatWithTutorProps) => {
+const ChatWithTutor = ({ sessionId: providedSessionId, conversationId }: ChatWithTutorProps) => {
   const { user } = useAuth();
   const { profile, refreshCredits } = useProfile();
   const [messages, setMessages] = useState<Message[]>([]);
@@ -43,6 +44,7 @@ const ChatWithTutor = ({ sessionId: providedSessionId }: ChatWithTutorProps) => 
   const [isLoading, setIsLoading] = useState(false);
   const [sessionId] = useState(() => providedSessionId || uuidv4());
   const [answerType, setAnswerType] = useState<'concise' | 'detailed'>('detailed');
+  const [currentConversationId, setCurrentConversationId] = useState<string | null>(conversationId || null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const scrollToBottom = () => {
@@ -55,8 +57,46 @@ const ChatWithTutor = ({ sessionId: providedSessionId }: ChatWithTutorProps) => 
 
   // Load conversation history on component mount
   useEffect(() => {
-    loadConversationHistory();
-  }, [sessionId, user]);
+    if (conversationId) {
+      loadSpecificConversation(conversationId);
+    } else {
+      loadConversationHistory();
+    }
+  }, [sessionId, user, conversationId]);
+
+  const loadSpecificConversation = async (convId: string) => {
+    if (!user) return;
+
+    try {
+      const { data, error } = await supabase
+        .from('conversation_history')
+        .select('*')
+        .eq('id', convId)
+        .eq('user_id', user.id)
+        .single();
+
+      if (error) {
+        console.error('خطأ في تحميل المحادثة:', error);
+        return;
+      }
+
+      if (data && data.messages) {
+        const convMessages = Array.isArray(data.messages) ? data.messages : [];
+        const loadedMessages: Message[] = convMessages.map((msg: any, index: number) => ({
+          id: msg.id || `msg-${index}`,
+          type: msg.role === 'user' ? 'user' : 'assistant',
+          content: msg.content || '',
+          timestamp: new Date(msg.created_at || data.created_at),
+          creditsUsed: msg.credits_used || 0
+        }));
+        setMessages(loadedMessages);
+        setCurrentConversationId(convId);
+        toast.success('تم تحميل المحادثة السابقة');
+      }
+    } catch (error) {
+      console.error('خطأ في تحميل المحادثة:', error);
+    }
+  };
 
   const loadConversationHistory = async () => {
     if (!user) return;
@@ -76,14 +116,18 @@ const ChatWithTutor = ({ sessionId: providedSessionId }: ChatWithTutorProps) => 
       }
 
       if (data && data.length > 0) {
-        const loadedMessages: Message[] = data.map((item: any) => ({
-          id: item.id,
-          type: item.message_type,
-          content: item.content,
-          timestamp: new Date(item.created_at),
-          creditsUsed: item.credits_used
+        // Load the most recent conversation's messages
+        const latestConv = data[data.length - 1];
+        const convMessages = Array.isArray(latestConv.messages) ? latestConv.messages : [];
+        const loadedMessages: Message[] = convMessages.map((msg: any, index: number) => ({
+          id: msg.id || `msg-${index}`,
+          type: msg.role === 'user' ? 'user' : 'assistant',
+          content: msg.content || '',
+          timestamp: new Date(msg.created_at || latestConv.created_at),
+          creditsUsed: msg.credits_used || 0
         }));
         setMessages(loadedMessages);
+        setCurrentConversationId(latestConv.id);
       }
     } catch (error) {
       console.error('خطأ في تحميل المحادثة:', error);
