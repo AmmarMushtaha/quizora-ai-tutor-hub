@@ -30,8 +30,7 @@ interface ConversationMessage {
 
 interface Conversation {
   id: string;
-  session_id: string;
-  title: string;
+  title: string | null;
   total_credits_used: number;
   created_at: string;
   updated_at: string;
@@ -41,8 +40,8 @@ interface Conversation {
 
 interface ConversationCardProps {
   conversation: Conversation;
-  onDelete: (sessionId: string) => Promise<void>;
-  onContinue?: (sessionId: string) => void;
+  onDelete: (id: string) => Promise<void>;
+  onContinue?: (id: string) => void;
 }
 
 export function ConversationCard({ conversation, onDelete, onContinue }: ConversationCardProps) {
@@ -52,7 +51,7 @@ export function ConversationCard({ conversation, onDelete, onContinue }: Convers
   const handleDelete = async () => {
     setIsDeleting(true);
     try {
-      await onDelete(conversation.session_id);
+      await onDelete(conversation.id);
     } catch (error) {
       console.error('Error deleting conversation:', error);
     } finally {
@@ -62,7 +61,7 @@ export function ConversationCard({ conversation, onDelete, onContinue }: Convers
 
   const handleContinue = () => {
     if (onContinue) {
-      onContinue(conversation.session_id);
+      onContinue(conversation.id);
     }
   };
 

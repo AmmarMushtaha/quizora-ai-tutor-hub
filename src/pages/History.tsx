@@ -25,13 +25,12 @@ import { useProfile } from "@/hooks/useProfile";
 
 interface Conversation {
   id: string;
-  session_id: string;
-  title: string;
-  total_credits_used: number;
+  title: string | null;
+  messages: any[];
   created_at: string;
   updated_at: string;
-  messages: any[];
   message_count: number;
+  total_credits_used: number;
 }
 
 interface AIRequest {
@@ -70,70 +69,49 @@ const History = () => {
         return;
       }
 
-      // Load conversation messages grouped by session_id
+      // Load conversations - each row is a complete conversation with messages as JSONB
       const { data: conversationsData } = await supabase
         .from("conversation_history")
         .select("*")
         .eq("user_id", session.user.id)
-        .order("created_at", { ascending: false });
+        .order("updated_at", { ascending: false });
 
       if (conversationsData) {
-        // Group messages by session_id to create conversations
-        const conversationMap = new Map<string, any>();
-        
-        conversationsData.forEach((message: any) => {
-          const sessionId = message.session_id;
+        const formattedConversations: Conversation[] = conversationsData.map((conv: any) => {
+          const messages = Array.isArray(conv.messages) ? conv.messages : [];
           
-          if (!conversationMap.has(sessionId)) {
-            // Initialize conversation with the first message
-            conversationMap.set(sessionId, {
-              id: message.id,
-              session_id: sessionId,
-              title: "",
-              total_credits_used: 0,
-              created_at: message.created_at,
-              updated_at: message.created_at,
-              messages: [],
-              message_count: 0
-            });
+          // Calculate total credits from messages
+          const totalCredits = messages.reduce((sum: number, msg: any) => sum + (msg.credits_used || 0), 0);
+          
+          // Get title from first user message or use stored title
+          let title = conv.title;
+          if (!title) {
+            const firstUserMessage = messages.find((msg: any) => msg.role === 'user');
+            if (firstUserMessage?.content) {
+              title = firstUserMessage.content.slice(0, 60) + (firstUserMessage.content.length > 60 ? '...' : '');
+            } else {
+              title = "محادثة جديدة";
+            }
           }
           
-          const conversation = conversationMap.get(sessionId);
-          conversation.messages.push(message);
-          conversation.message_count++;
-          conversation.total_credits_used += message.credits_used || 0;
-          
-          // Update the latest timestamp
-          if (new Date(message.created_at) > new Date(conversation.updated_at)) {
-            conversation.updated_at = message.created_at;
-          }
+          return {
+            id: conv.id,
+            title,
+            messages: messages.map((msg: any) => ({
+              id: msg.id || crypto.randomUUID(),
+              message_type: msg.role || 'user',
+              content: msg.content || '',
+              created_at: msg.created_at || conv.created_at,
+              credits_used: msg.credits_used || 0
+            })),
+            created_at: conv.created_at,
+            updated_at: conv.updated_at,
+            message_count: messages.length,
+            total_credits_used: totalCredits
+          };
         });
         
-        // Set titles and sort messages for each conversation
-        const conversations = Array.from(conversationMap.values()).map(conversation => {
-          // Sort messages by creation time
-          conversation.messages.sort((a: any, b: any) => 
-            new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
-          );
-          
-          // Set title based on first user message
-          const firstUserMessage = conversation.messages.find((msg: any) => msg.message_type === 'user');
-          if (firstUserMessage) {
-            conversation.title = firstUserMessage.content.slice(0, 60) + 
-              (firstUserMessage.content.length > 60 ? '...' : '');
-          } else {
-            conversation.title = "محادثة جديدة";
-          }
-          
-          return conversation;
-        });
-        
-        // Sort conversations by updated_at descending
-        conversations.sort((a, b) => 
-          new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime()
-        );
-        
-        setConversations(conversations);
+        setConversations(formattedConversations);
       }
 
       // Load AI requests
@@ -157,21 +135,16 @@ const History = () => {
     }
   };
 
-  const deleteConversation = async (sessionId: string) => {
+  const deleteConversation = async (conversationId: string) => {
     try {
-      // Delete all messages for this conversation
-      const conversation = conversations.find(c => c.session_id === sessionId);
-      if (!conversation) return;
-      
-      const messageIds = conversation.messages.map((m: any) => m.id);
       const { error } = await supabase
         .from("conversation_history")
         .delete()
-        .in("id", messageIds);
+        .eq("id", conversationId);
 
       if (error) throw error;
 
-      setConversations(conversations.filter(conv => conv.session_id !== sessionId));
+      setConversations(conversations.filter(conv => conv.id !== conversationId));
       
       toast({
         title: "تم الحذف",
@@ -186,8 +159,8 @@ const History = () => {
     }
   };
 
-  const continueConversation = (sessionId: string) => {
-    navigate("/dashboard", { state: { sessionId } });
+  const continueConversation = (conversationId: string) => {
+    navigate("/dashboard", { state: { conversationId } });
   };
 
   // Enhanced filtering and sorting logic
@@ -439,7 +412,7 @@ const History = () => {
                   <div className="grid grid-cols-1 gap-6">
                     {filteredAndSortedData.conversations.map((conversation) => (
                       <ConversationCard
-                        key={conversation.session_id}
+                        key={conversation.id}
                         conversation={conversation}
                         onDelete={deleteConversation}
                         onContinue={continueConversation}
